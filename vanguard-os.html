@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VANGUARD OS</title>
+<style>
+  html,body{margin:0;padding:0;background:#060c12;min-height:100vh;overflow-x:hidden}
+  #video-bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;display:flex;justify-content:center;overflow:hidden;background:#060c12}
+  #video-bg video{width:480px;height:100%;object-fit:cover;flex-shrink:0}
+  #video-bg::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(6,10,18,0.35);z-index:1}
+  #side-left,#side-right{position:fixed;top:0;bottom:0;background:#060c12;z-index:1}
+  #side-left{left:0;right:calc(50% + 240px)}
+  #side-right{left:calc(50% + 240px);right:0}
+  #root{position:relative;z-index:2}
+</style>
+</head>
+<body>
+<div id="video-bg"><video autoplay loop muted playsinline><source src="assets/raider-idle.mp4" type="video/mp4"></video></div>
+<div id="side-left"></div><div id="side-right"></div>
+<audio id="menu-music" loop>
+  <source src="assets/menu-music.mp3" type="audio/mpeg">
+  <source src="assets/menu-music.ogg" type="audio/ogg">
+</audio>
+<div id="root"></div>
+<script>
+const music=document.getElementById('menu-music');
+music.volume=0.35;
+function startMusic(){music.play().catch(()=>{});document.removeEventListener('click',startMusic);document.removeEventListener('keydown',startMusic);}
+music.play().catch(()=>{document.addEventListener('click',startMusic);document.addEventListener('keydown',startMusic);});
+</script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useRef,useEffect} = React;
+
+const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [highlightedItem, setHighlightedItem] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragSource, setDragSource] = useState(null);
+
+  const [dropdown, setDropdown] = useState(null);
+  const mainContentRef = useRef(null);
+  useEffect(() => { const el = mainContentRef.current;
+    if (!el) return;
+    const hide = () => setDropdown(null);
+    el.addEventListener('scroll', hide, { passive: true });
+    return () => el.removeEventListener('scroll', hide); }, []);
+
+  const [activeStation, setActiveStation] = useState('gunsmith');
+  const [craftSheet, setCraftSheet] = useState(null);
+  const [activeTrader, setActiveTrader] = useState('celeste');
+  const [traderSubTab, setTraderSubTab] = useState('TRADES');
+  const [traderSheet, setTraderSheet] = useState(null);
+  const [raiderSection, setRaiderSection] = useState(null);
+  const [dailyRewardOpen, setDailyRewardOpen] = useState(false);
+  const [itemActionSheet, setItemActionSheet] = useState(null);
+
+  const [loadout, setLoadout] = useState({ augment: null,
+    armor: null,
+    primary: null,
+    secondary: null,
+    backpack: Array(10).fill(null),
+    quickUse: Array(4).fill(null),
+    safePocket: null });
+
+  const INVENTORY_DB = [
+  {id:1,name:'Arpeggio I',category:'WEAPONS',sub:'Assault Rifle',rarity:'D',weight:6,qty:1,icon:'arpeggio_i'},
+  {id:2,name:'Arpeggio II',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:6,qty:1,icon:'arpeggio_ii'},
+  {id:3,name:'Arpeggio III',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:6,qty:1,icon:'arpeggio_iii'},
+  {id:4,name:'Arpeggio IV',category:'WEAPONS',sub:'Assault Rifle',rarity:'A',weight:6,qty:1,icon:'arpeggio_iv'},
+  {id:5,name:'Arpeggio',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:6,qty:1,icon:'arpeggio'},
+  {id:6,name:'Bettina I',category:'WEAPONS',sub:'Assault Rifle',rarity:'D',weight:6.5,qty:1,icon:'bettina_i'},
+  {id:7,name:'Bettina II',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:6.5,qty:1,icon:'bettina_ii'},
+  {id:8,name:'Bettina III',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:6.5,qty:1,icon:'bettina_iii'},
+  {id:9,name:'Bettina IV',category:'WEAPONS',sub:'Assault Rifle',rarity:'A',weight:6.5,qty:1,icon:'bettina_iv'},
+  {id:10,name:'Bettina',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:6.5,qty:1,icon:'bettina'},
+  {id:11,name:'Rattler',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:4.5,qty:1,icon:'rattler'},
+  {id:12,name:'Rattler I',category:'WEAPONS',sub:'Assault Rifle',rarity:'D',weight:4.5,qty:1,icon:'rattler_i'},
+  {id:13,name:'Tempest I',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:5,qty:1,icon:'tempest_i'},
+  {id:14,name:'Renegade I',category:'WEAPONS',sub:'Battle Rifle',rarity:'D',weight:7,qty:1,icon:'renegade_i'},
+  {id:15,name:'Renegade II',category:'WEAPONS',sub:'Battle Rifle',rarity:'B',weight:7,qty:1,icon:'renegade_ii'},
+  {id:16,name:'Renegade III',category:'WEAPONS',sub:'Battle Rifle',rarity:'A',weight:7,qty:1,icon:'renegade_iii'},
+  {id:17,name:'Renegade',category:'WEAPONS',sub:'Battle Rifle',rarity:'B',weight:7,qty:1,icon:'renegade'},
+  {id:18,name:'Ferro I',category:'WEAPONS',sub:'Battle Rifle',rarity:'D',weight:8,qty:1,icon:'ferro_i'},
+  {id:19,name:'Ferro II',category:'WEAPONS',sub:'Battle Rifle',rarity:'C',weight:8,qty:1,icon:'ferro_ii'},
+  {id:20,name:'Ferro III',category:'WEAPONS',sub:'Battle Rifle',rarity:'B',weight:8,qty:1,icon:'ferro_iii'},
+  {id:21,name:'Ferro IV',category:'WEAPONS',sub:'Battle Rifle',rarity:'A',weight:8,qty:1,icon:'ferro_iv'},
+  {id:22,name:'Ferro',category:'WEAPONS',sub:'Battle Rifle',rarity:'B',weight:8,qty:1,icon:'ferro'},
+  {id:23,name:'Osprey',category:'WEAPONS',sub:'Sniper Rifle',rarity:'B',weight:8,qty:1,icon:'osprey'},
+  {id:24,name:'Osprey III',category:'WEAPONS',sub:'Sniper Rifle',rarity:'B',weight:8,qty:1,icon:'osprey_iii'},
+  {id:25,name:'Osprey IV',category:'WEAPONS',sub:'Sniper Rifle',rarity:'A',weight:8,qty:1,icon:'osprey_iv'},
+  {id:26,name:'Jupiter',category:'WEAPONS',sub:'Sniper Rifle',rarity:'A',weight:9,qty:1,icon:'jupiter'},
+  {id:27,name:'Deadline',category:'WEAPONS',sub:'Sniper Rifle',rarity:'S',weight:7,qty:1,icon:'deadline'},
+  {id:28,name:'Anvil I',category:'WEAPONS',sub:'Hand Cannon',rarity:'D',weight:5,qty:1,icon:'anvil_i'},
+  {id:29,name:'Anvil II',category:'WEAPONS',sub:'Hand Cannon',rarity:'C',weight:5,qty:1,icon:'anvil_ii'},
+  {id:30,name:'Anvil III',category:'WEAPONS',sub:'Hand Cannon',rarity:'B',weight:5,qty:1,icon:'anvil_iii'},
+  {id:31,name:'Anvil IV',category:'WEAPONS',sub:'Hand Cannon',rarity:'A',weight:5,qty:1,icon:'anvil_iv'},
+  {id:32,name:'Anvil',category:'WEAPONS',sub:'Hand Cannon',rarity:'B',weight:5,qty:1,icon:'anvil'},
+  {id:33,name:'Venator I',category:'WEAPONS',sub:'Pistol',rarity:'D',weight:4.5,qty:1,icon:'venator_i'},
+  {id:34,name:'Venator II',category:'WEAPONS',sub:'Pistol',rarity:'C',weight:4.5,qty:1,icon:'venator_ii'},
+  {id:35,name:'Venator III',category:'WEAPONS',sub:'Pistol',rarity:'B',weight:4.5,qty:1,icon:'venator_iii'},
+  {id:36,name:'Venator IV',category:'WEAPONS',sub:'Pistol',rarity:'A',weight:4.5,qty:1,icon:'venator_iv'},
+  {id:37,name:'Burletta I',category:'WEAPONS',sub:'Pistol',rarity:'D',weight:2,qty:1,icon:'burletta_i'},
+  {id:38,name:'Burletta III',category:'WEAPONS',sub:'Pistol',rarity:'B',weight:2,qty:1,icon:'burletta_iii'},
+  {id:39,name:'Burletta IV',category:'WEAPONS',sub:'Pistol',rarity:'A',weight:2,qty:1,icon:'burletta_iv'},
+  {id:40,name:'Hairpin I',category:'WEAPONS',sub:'Pistol',rarity:'D',weight:3,qty:1,icon:'hairpin_i'},
+  {id:41,name:'Hairpin II',category:'WEAPONS',sub:'Pistol',rarity:'C',weight:3,qty:1,icon:'hairpin_ii'},
+  {id:42,name:'Hairpin III',category:'WEAPONS',sub:'Pistol',rarity:'B',weight:3,qty:1,icon:'hairpin_iii'},
+  {id:43,name:'Hairpin IV',category:'WEAPONS',sub:'Pistol',rarity:'A',weight:3,qty:1,icon:'hairpin_iv'},
+  {id:44,name:'Bobcat I',category:'WEAPONS',sub:'SMG',rarity:'D',weight:3.5,qty:1,icon:'bobcat_i'},
+  {id:45,name:'Stitcher',category:'WEAPONS',sub:'SMG',rarity:'B',weight:3,qty:1,icon:'stitcher'},
+  {id:46,name:'Il Toro',category:'WEAPONS',sub:'Shotgun',rarity:'C',weight:6,qty:1,icon:'il_toro'},
+  {id:47,name:'Il Toro II',category:'WEAPONS',sub:'Shotgun',rarity:'B',weight:6,qty:1,icon:'il_toro_ii'},
+  {id:48,name:'Vulcano I',category:'WEAPONS',sub:'Shotgun',rarity:'D',weight:7,qty:1,icon:'vulcano_i'},
+  {id:49,name:'Torrente',category:'WEAPONS',sub:'LMG',rarity:'B',weight:8,qty:1,icon:'torrente'},
+  {id:50,name:'Hullcracker I',category:'WEAPONS',sub:'Launcher',rarity:'D',weight:9,qty:1,icon:'hullcracker_i'},
+  {id:51,name:'Hullcracker II',category:'WEAPONS',sub:'Launcher',rarity:'C',weight:9,qty:1,icon:'hullcracker_ii'},
+  {id:52,name:'Hullcracker III',category:'WEAPONS',sub:'Launcher',rarity:'B',weight:9,qty:1,icon:'hullcracker_iii'},
+  {id:53,name:'Hullcracker IV',category:'WEAPONS',sub:'Launcher',rarity:'A',weight:9,qty:1,icon:'hullcracker_iv'},
+  {id:54,name:'Equalizer',category:'WEAPONS',sub:'Special',rarity:'S',weight:5,qty:1,icon:'equalizer'},
+  {id:55,name:'Showstopper',category:'WEAPONS',sub:'Special',rarity:'A',weight:7,qty:1,icon:'showstopper'},
+  {id:56,name:'Wolfpack',category:'WEAPONS',sub:'Special',rarity:'S',weight:8,qty:1,icon:'wolfpack'},
+  {id:57,name:'Trailblazer',category:'WEAPONS',sub:'Special',rarity:'S',weight:6,qty:1,icon:'trailblazer'},
+  {id:58,name:'Kettle',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:4,qty:1,icon:'kettle'},
+  {id:59,name:'Kettle I',category:'WEAPONS',sub:'Assault Rifle',rarity:'D',weight:4,qty:1,icon:'kettle_i'},
+  {id:60,name:'Kettle III',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:4,qty:1,icon:'kettle_iii'},
+  {id:61,name:'Kettle IV',category:'WEAPONS',sub:'Assault Rifle',rarity:'A',weight:4,qty:1,icon:'kettle_iv'},
+  {id:62,name:'Light Shield',category:'SHIELDS',sub:'Shield',rarity:'C',weight:4,qty:1,icon:'light_shield'},
+  {id:63,name:'Medium Shield',category:'SHIELDS',sub:'Shield',rarity:'B',weight:7,qty:1,icon:'medium_shield'},
+  {id:64,name:'Heavy Shield',category:'SHIELDS',sub:'Shield',rarity:'A',weight:9,qty:1,icon:'heavy_shield'},
+  {id:65,name:'Free Loadout Augment',category:'SHIELDS',sub:'Free Kit',rarity:'D',weight:0,qty:1,icon:'free_loadout_augment'},
+  {id:66,name:'Looting Mk. 1',category:'AUGMENTS',sub:'Augment',rarity:'C',weight:1,qty:1,icon:'looting_mk1'},
+  {id:67,name:'Looting Mk. 2',category:'AUGMENTS',sub:'Augment',rarity:'B',weight:1,qty:1,icon:'looting_mk2'},
+  {id:68,name:'Looting Mk. 3 (Cautious)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'looting_mk3_cautious'},
+  {id:69,name:'Looting Mk. 3 (Survivor)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'looting_mk3_survivor'},
+  {id:70,name:'Combat Mk. 2',category:'AUGMENTS',sub:'Augment',rarity:'B',weight:1,qty:1,icon:'combat_mk2'},
+  {id:71,name:'Combat Mk. 3 (Aggressive)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'combat_mk3_aggressive'},
+  {id:72,name:'Tactical Mk. 1',category:'AUGMENTS',sub:'Augment',rarity:'C',weight:1,qty:1,icon:'tactical_mk1'},
+  {id:73,name:'Tactical Mk. 2',category:'AUGMENTS',sub:'Augment',rarity:'B',weight:1,qty:1,icon:'tactical_mk2'},
+  {id:74,name:'Tactical Mk. 3 (Defensive)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'tactical_mk3_defensive'},
+  {id:75,name:'Tactical Mk. 3 (Healing)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'tactical_iii_healing'},
+  {id:76,name:'Angled Grip I',category:'MODS',sub:'Grip',rarity:'D',weight:0.25,qty:3,icon:'angled_grip_i'},
+  {id:77,name:'Angled Grip II',category:'MODS',sub:'Grip',rarity:'C',weight:0.5,qty:2,icon:'angled_grip_ii'},
+  {id:78,name:'Angled Grip III',category:'MODS',sub:'Grip',rarity:'B',weight:0.5,qty:1,icon:'angled_grip_iii'},
+  {id:79,name:'Vertical Grip I',category:'MODS',sub:'Grip',rarity:'D',weight:0.25,qty:3,icon:'vertical_grip_i'},
+  {id:80,name:'Vertical Grip II',category:'MODS',sub:'Grip',rarity:'C',weight:0.5,qty:2,icon:'vertical_grip_ii'},
+  {id:81,name:'Vertical Grip III',category:'MODS',sub:'Grip',rarity:'B',weight:0.5,qty:1,icon:'vertical_grip_iii'},
+  {id:82,name:'Compensator I',category:'MODS',sub:'Muzzle',rarity:'D',weight:0.3,qty:3,icon:'compensator_i'},
+  {id:83,name:'Compensator II',category:'MODS',sub:'Muzzle',rarity:'C',weight:0.3,qty:2,icon:'compensator_ii'},
+  {id:84,name:'Compensator III',category:'MODS',sub:'Muzzle',rarity:'B',weight:0.3,qty:1,icon:'compensator_iii'},
+  {id:85,name:'Muzzle Brake I',category:'MODS',sub:'Muzzle',rarity:'D',weight:0.3,qty:2,icon:'muzzle_brake_i'},
+  {id:86,name:'Muzzle Brake II',category:'MODS',sub:'Muzzle',rarity:'C',weight:0.3,qty:1,icon:'muzzle_brake_ii'},
+  {id:87,name:'Muzzle Brake III',category:'MODS',sub:'Muzzle',rarity:'B',weight:0.3,qty:1,icon:'muzzle_brake_iii'},
+  {id:88,name:'Silencer I',category:'MODS',sub:'Muzzle',rarity:'C',weight:0.3,qty:2,icon:'silencer_i'},
+  {id:89,name:'Silencer II',category:'MODS',sub:'Muzzle',rarity:'B',weight:0.3,qty:1,icon:'silencer_ii'},
+  {id:90,name:'Silencer III',category:'MODS',sub:'Muzzle',rarity:'A',weight:0.3,qty:1,icon:'silencer_iii'},
+  {id:91,name:'Shotgun Choke I',category:'MODS',sub:'Muzzle',rarity:'D',weight:0.3,qty:1,icon:'shotgun_choke_i'},
+  {id:92,name:'Shotgun Choke II',category:'MODS',sub:'Muzzle',rarity:'C',weight:0.3,qty:1,icon:'shotgun_choke_ii'},
+  {id:93,name:'Shotgun Choke III',category:'MODS',sub:'Muzzle',rarity:'B',weight:0.3,qty:1,icon:'shotgun_choke_iii'},
+  {id:94,name:'Shotgun Silencer',category:'MODS',sub:'Muzzle',rarity:'A',weight:0.4,qty:1,icon:'shotgun_silencer'},
+  {id:95,name:'Extended Barrel',category:'MODS',sub:'Barrel',rarity:'A',weight:0.4,qty:1,icon:'extended_barrel'},
+  {id:96,name:'Lightweight Stock',category:'MODS',sub:'Stock',rarity:'B',weight:0.4,qty:1,icon:'lightweight_stock'},
+  {id:97,name:'Padded Stock',category:'MODS',sub:'Stock',rarity:'B',weight:0.4,qty:1,icon:'padded_stock'},
+  {id:98,name:'Stable Stock I',category:'MODS',sub:'Stock',rarity:'D',weight:0.3,qty:2,icon:'stable_stock_i'},
+  {id:99,name:'Stable Stock II',category:'MODS',sub:'Stock',rarity:'C',weight:0.3,qty:1,icon:'stable_stock_ii'},
+  {id:100,name:'Stable Stock III',category:'MODS',sub:'Stock',rarity:'B',weight:0.3,qty:1,icon:'stable_stock_iii'},
+  {id:101,name:'Ext. Light Mag I',category:'MODS',sub:'Magazine',rarity:'D',weight:0.2,qty:3,icon:'extended_light_mag_i'},
+  {id:102,name:'Ext. Light Mag II',category:'MODS',sub:'Magazine',rarity:'C',weight:0.2,qty:2,icon:'extended_light_mag_ii'},
+  {id:103,name:'Ext. Medium Mag I',category:'MODS',sub:'Magazine',rarity:'D',weight:0.2,qty:2,icon:'extended_medium_mag_i'},
+  {id:104,name:'Ext. Medium Mag II',category:'MODS',sub:'Magazine',rarity:'C',weight:0.2,qty:1,icon:'extended_medium_mag_ii'},
+  {id:105,name:'Ext. Medium Mag III',category:'MODS',sub:'Magazine',rarity:'B',weight:0.2,qty:1,icon:'extended_medium_mag_iii'},
+  {id:106,name:'Ext. Shotgun Mag I',category:'MODS',sub:'Magazine',rarity:'D',weight:0.2,qty:1,icon:'extended_shotgun_mag_i'},
+  {id:107,name:'Ext. Shotgun Mag II',category:'MODS',sub:'Magazine',rarity:'C',weight:0.2,qty:1,icon:'extended_shotgun_mag_ii'},
+  {id:108,name:'Ext. Shotgun Mag III',category:'MODS',sub:'Magazine',rarity:'B',weight:0.2,qty:1,icon:'extended_shotgun_mag_iii'},
+  {id:109,name:'Kinetic Converter',category:'MODS',sub:'Special',rarity:'A',weight:0.4,qty:1,icon:'kinetic_converter'},
+  {id:110,name:'Pop Trigger',category:'MODS',sub:'Special',rarity:'B',weight:0.3,qty:1,icon:'pop_trigger'},
+  {id:111,name:'Anvil Splitter',category:'MODS',sub:'Special',rarity:'S',weight:0.5,qty:1,icon:'anvil_splitter'},
+  {id:112,name:'Ion Sputter',category:'MODS',sub:'Special',rarity:'B',weight:0.4,qty:1,icon:'ion_sputter'},
+  {id:113,name:'Angled Grip II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'angled_grip_ii_blueprint'},
+  {id:114,name:'Anvil Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'anvil_blueprint'},
+  {id:115,name:'Aphelion Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'aphelion_blueprint'},
+  {id:116,name:'Barricade Kit Blueprint',category:'BLUEPRINTS',sub:'Gadget BP',rarity:'S',weight:0,qty:1,icon:'barricade_kit_blueprint'},
+  {id:117,name:'Bettina Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'bettina_blueprint'},
+  {id:118,name:'Blaze Grenade Blueprint',category:'BLUEPRINTS',sub:'Grenade BP',rarity:'S',weight:0,qty:1,icon:'blaze_grenade_blueprint'},
+  {id:119,name:'Blue Light Stick Blueprint',category:'BLUEPRINTS',sub:'Quick Use BP',rarity:'S',weight:0,qty:1,icon:'blue_light_stick_blueprint'},
+  {id:120,name:'Bobcat Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'bobcat_blueprint'},
+  {id:121,name:'Burletta Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'burletta_blueprint'},
+  {id:122,name:'Combat Mk.3 Aggressive Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'combat_mk3_aggressive_blueprint'},
+  {id:123,name:'Combat Mk.3 Flanking Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'combat_mk3_flanking_blueprint'},
+  {id:124,name:'Compensator II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'compensator_ii_blueprint'},
+  {id:125,name:'Compensator III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'compensator_iii_blueprint'},
+  {id:126,name:'Complex Gun Parts Blueprint',category:'BLUEPRINTS',sub:'Parts BP',rarity:'S',weight:0,qty:1,icon:'complex_gun_parts_blueprint'},
+  {id:127,name:'Deadline Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'deadline_blueprint'},
+  {id:128,name:'Defibrillator Blueprint',category:'BLUEPRINTS',sub:'Medical BP',rarity:'S',weight:0,qty:1,icon:'defibrillator_blueprint'},
+  {id:129,name:'Equalizer Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'equalizer_blueprint'},
+  {id:130,name:'Explosive Mine Blueprint',category:'BLUEPRINTS',sub:'Trap BP',rarity:'S',weight:0,qty:1,icon:'explosive_mine_blueprint'},
+  {id:131,name:'Extended Barrel Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_barrel_blueprint'},
+  {id:132,name:'Ext. Light Mag II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_light_mag_ii_blueprint'},
+  {id:133,name:'Ext. Light Mag III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_light_mag_iii_blueprint'},
+  {id:134,name:'Ext. Medium Mag II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_medium_mag_ii_blueprint'},
+  {id:135,name:'Ext. Medium Mag III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_medium_mag_iii_blueprint'},
+  {id:136,name:'Ext. Shotgun Mag II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_shotgun_mag_ii_blueprint'},
+  {id:137,name:'Ext. Shotgun Mag III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'extended_shotgun_mag_iii_blueprint'},
+  {id:138,name:'Fireworks Box Blueprint',category:'BLUEPRINTS',sub:'Gadget BP',rarity:'S',weight:0,qty:1,icon:'fireworks_box_blueprint'},
+  {id:139,name:'Gas Mine Blueprint',category:'BLUEPRINTS',sub:'Trap BP',rarity:'S',weight:0,qty:1,icon:'gas_mine_blueprint'},
+  {id:140,name:'Green Light Stick Blueprint',category:'BLUEPRINTS',sub:'Quick Use BP',rarity:'S',weight:0,qty:1,icon:'green_light_stick_blueprint'},
+  {id:141,name:'Heavy Gun Parts Blueprint',category:'BLUEPRINTS',sub:'Parts BP',rarity:'S',weight:0,qty:1,icon:'heavy_gun_parts_blueprint'},
+  {id:142,name:'Hullcracker Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'hullcracker_blueprint'},
+  {id:143,name:'Il Toro Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'il_toro_blueprint'},
+  {id:144,name:'Jolt Mine Blueprint',category:'BLUEPRINTS',sub:'Trap BP',rarity:'S',weight:0,qty:1,icon:'jolt_mine_blueprint'},
+  {id:145,name:'Jupiter Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'jupiter_blueprint'},
+  {id:146,name:'Light Gun Parts Blueprint',category:'BLUEPRINTS',sub:'Parts BP',rarity:'S',weight:0,qty:1,icon:'light_gun_parts_blueprint'},
+  {id:147,name:'Lightweight Stock Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'lightweight_stock_blueprint'},
+  {id:148,name:'Looting Mk.3 Survivor Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'looting_mk3_survivor_blueprint'},
+  {id:149,name:'Lure Grenade Blueprint',category:'BLUEPRINTS',sub:'Grenade BP',rarity:'S',weight:0,qty:1,icon:'lure_grenade_blueprint'},
+  {id:150,name:'Medium Gun Parts Blueprint',category:'BLUEPRINTS',sub:'Parts BP',rarity:'S',weight:0,qty:1,icon:'medium_gun_parts_blueprint'},
+  {id:151,name:'Muzzle Brake II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'muzzle_brake_ii_blueprint'},
+  {id:152,name:'Osprey Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'osprey_blueprint'},
+  {id:153,name:'Padded Stock Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'padded_stock_blueprint'},
+  {id:154,name:'Pulse Mine Blueprint',category:'BLUEPRINTS',sub:'Trap BP',rarity:'S',weight:0,qty:1,icon:'pulse_mine_blueprint'},
+  {id:155,name:'Red Light Stick Blueprint',category:'BLUEPRINTS',sub:'Quick Use BP',rarity:'S',weight:0,qty:1,icon:'red_light_stick_blueprint'},
+  {id:156,name:'Remote Raider Flare Blueprint',category:'BLUEPRINTS',sub:'Gadget BP',rarity:'S',weight:0,qty:1,icon:'remote_raider_flare_blueprint'},
+  {id:157,name:'Shotgun Choke II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'shotgun_choke_ii_blueprint'},
+  {id:158,name:'Shotgun Choke III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'shotgun_choke_iii_blueprint'},
+  {id:159,name:'Shotgun Silencer Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'shotgun_silencer_blueprint'},
+  {id:160,name:'Showstopper Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'showstopper_blueprint'},
+  {id:161,name:'Silencer I Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'silencer_i_blueprint'},
+  {id:162,name:'Silencer II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'silencer_ii_blueprint'},
+  {id:163,name:'Smoke Grenade Blueprint',category:'BLUEPRINTS',sub:'Grenade BP',rarity:'S',weight:0,qty:1,icon:'smoke_grenade_blueprint'},
+  {id:164,name:'Snap Hook Blueprint',category:'BLUEPRINTS',sub:'Gadget BP',rarity:'S',weight:0,qty:1,icon:'snap_hook_blueprint'},
+  {id:165,name:'Stable Stock II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'stable_stock_ii_blueprint'},
+  {id:166,name:'Stable Stock III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'stable_stock_iii_blueprint'},
+  {id:167,name:'Tactical Mk.3 Defensive Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'tactical_iii_defensive_blueprint'},
+  {id:168,name:'Tactical Mk.3 Healing Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'tactical_iii_healing_blueprint'},
+  {id:169,name:'Tagging Grenade Blueprint',category:'BLUEPRINTS',sub:'Grenade BP',rarity:'S',weight:0,qty:1,icon:'tagging_grenade_blueprint'},
+  {id:170,name:'Tempest Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'tempest_blueprint'},
+  {id:171,name:'Torrente Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'torrente_blueprint'},
+  {id:172,name:'Trigger \'Nade Blueprint',category:'BLUEPRINTS',sub:'Grenade BP',rarity:'S',weight:0,qty:1,icon:'trigger_nade_blueprint'},
+  {id:173,name:'Venator Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'venator_blueprint'},
+  {id:174,name:'Vertical Grip II Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'vertical_grip_ii_blueprint'},
+  {id:175,name:'Vertical Grip III Blueprint',category:'BLUEPRINTS',sub:'Mod BP',rarity:'S',weight:0,qty:1,icon:'vertical_grip_iii_blueprint'},
+  {id:176,name:'Vita Shot Blueprint',category:'BLUEPRINTS',sub:'Medical BP',rarity:'S',weight:0,qty:1,icon:'vita_shot_blueprint'},
+  {id:177,name:'Vita Spray Blueprint',category:'BLUEPRINTS',sub:'Medical BP',rarity:'S',weight:0,qty:1,icon:'vita_spray_blueprint'},
+  {id:178,name:'Vulcano Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'vulcano_blueprint'},
+  {id:179,name:'Wolfpack Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'wolfpack_blueprint'},
+  {id:180,name:'Yellow Light Stick Blueprint',category:'BLUEPRINTS',sub:'Quick Use BP',rarity:'S',weight:0,qty:1,icon:'yellow_light_stick_blueprint'},
+  {id:181,name:'Vita Spray',category:'CONSUMABLES',sub:'Healing',rarity:'A',weight:0.5,qty:3,icon:'vita_spray'},
+  {id:182,name:'Vita Shot',category:'CONSUMABLES',sub:'Healing',rarity:'B',weight:0.2,qty:5,icon:'vita_shot'},
+  {id:183,name:'Adrenaline Shot',category:'CONSUMABLES',sub:'Healing',rarity:'C',weight:0.2,qty:4,icon:'adrenaline_shot'},
+  {id:184,name:'Bandage',category:'CONSUMABLES',sub:'Healing',rarity:'D',weight:0.1,qty:6,icon:'bandage'},
+  {id:185,name:'Herbal Bandage',category:'CONSUMABLES',sub:'Healing',rarity:'C',weight:0.1,qty:3,icon:'herbal_bandage'},
+  {id:186,name:'Sterilized Bandage',category:'CONSUMABLES',sub:'Healing',rarity:'B',weight:0.1,qty:4,icon:'sterilized_bandage'},
+  {id:187,name:'Syringe',category:'CONSUMABLES',sub:'Healing',rarity:'B',weight:0.1,qty:2,icon:'syringe'},
+  {id:188,name:'Defibrillator',category:'CONSUMABLES',sub:'Healing',rarity:'A',weight:0.5,qty:1,icon:'defibrillator'},
+  {id:189,name:'Shield Recharger',category:'CONSUMABLES',sub:'Shield',rarity:'B',weight:0.3,qty:6,icon:'shield_recharger'},
+  {id:190,name:'Surge Shield Recharger',category:'CONSUMABLES',sub:'Shield',rarity:'A',weight:0.4,qty:2,icon:'surge_shield_recharger'},
+  {id:191,name:'Smoke Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.5,qty:4,icon:'smoke_grenade'},
+  {id:192,name:'Blaze Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'B',weight:0.5,qty:2,icon:'blaze_grenade'},
+  {id:193,name:'Gas Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'B',weight:0.5,qty:2,icon:'gas_grenade'},
+  {id:194,name:'Lure Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'B',weight:0.4,qty:3,icon:'lure_grenade'},
+  {id:195,name:'Tagging Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.4,qty:3,icon:'tagging_grenade'},
+  {id:196,name:'Seeker Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'A',weight:0.5,qty:1,icon:'seeker_grenade'},
+  {id:197,name:'Shrapnel Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.5,qty:2,icon:'shrapnel_grenade'},
+  {id:198,name:'Light Impact Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.4,qty:3,icon:'light_impact_grenade'},
+  {id:199,name:'Snap Blast Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'B',weight:0.5,qty:2,icon:'snap_blast_grenade'},
+  {id:200,name:'Heavy Fuze Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'B',weight:0.6,qty:2,icon:'heavy_fuze_grenade'},
+  {id:201,name:'Lil Smoke Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.3,qty:5,icon:'lil_smoke_grenade'},
+  {id:202,name:'Trigger \'Nade',category:'CONSUMABLES',sub:'Grenade',rarity:'A',weight:0.5,qty:2,icon:'trigger_nade'},
+  {id:203,name:'Explosive Mine',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:1,qty:2,icon:'explosive_mine'},
+  {id:204,name:'Jolt Mine',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:0.8,qty:2,icon:'jolt_mine'},
+  {id:205,name:'Pulse Mine',category:'CONSUMABLES',sub:'Trap',rarity:'A',weight:0.8,qty:1,icon:'pulse_mine'},
+  {id:206,name:'Gas Mine',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:0.9,qty:1,icon:'gas_mine'},
+  {id:207,name:'Smoke Grenade Trap',category:'CONSUMABLES',sub:'Trap',rarity:'C',weight:0.5,qty:2,icon:'smoke_grenade_trap'},
+  {id:208,name:'Blaze Grenade Trap',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:0.5,qty:1,icon:'blaze_grenade_trap'},
+  {id:209,name:'Lure Grenade Trap',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:0.4,qty:2,icon:'lure_grenade_trap'},
+  {id:210,name:'Unknown Mine',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:1,qty:1,icon:'somethingmine'},
+  {id:211,name:'Snap Hook',category:'CONSUMABLES',sub:'Gadget',rarity:'A',weight:1,qty:2,icon:'snap_hook'},
+  {id:212,name:'Photoelectric Cloak',category:'CONSUMABLES',sub:'Gadget',rarity:'A',weight:0.5,qty:1,icon:'photoelectric_cloak'},
+  {id:213,name:'Binoculars',category:'CONSUMABLES',sub:'Gadget',rarity:'C',weight:0.5,qty:1,icon:'binoculars'},
+  {id:214,name:'Noisemaker',category:'CONSUMABLES',sub:'Gadget',rarity:'C',weight:0.3,qty:3,icon:'noisemaker'},
+  {id:215,name:'Recorder',category:'CONSUMABLES',sub:'Gadget',rarity:'B',weight:0.4,qty:1,icon:'recorder'},
+  {id:216,name:'Remote Raider Flare',category:'CONSUMABLES',sub:'Gadget',rarity:'B',weight:0.4,qty:2,icon:'remote_raider_flare'},
+  {id:217,name:'Door Blocker',category:'CONSUMABLES',sub:'Utility',rarity:'C',weight:1,qty:2,icon:'door_blocker'},
+  {id:218,name:'Barricade Kit',category:'CONSUMABLES',sub:'Utility',rarity:'B',weight:1,qty:1,icon:'barricade_kit'},
+  {id:219,name:'Zipline',category:'CONSUMABLES',sub:'Utility',rarity:'A',weight:1.5,qty:1,icon:'zipline'},
+  {id:220,name:'Fireworks Box',category:'CONSUMABLES',sub:'Gadget',rarity:'B',weight:0.5,qty:1,icon:'fireworks_box'},
+  {id:221,name:'Crude Explosives',category:'CONSUMABLES',sub:'Explosive',rarity:'C',weight:0.5,qty:3,icon:'crude_explosives'},
+  {id:222,name:'Flame Spray',category:'CONSUMABLES',sub:'Gadget',rarity:'B',weight:0.5,qty:1,icon:'flame_spray'},
+  {id:223,name:'Firecracker',category:'CONSUMABLES',sub:'Gadget',rarity:'C',weight:0.2,qty:4,icon:'firecracker'},
+  {id:224,name:'Red Light Stick',category:'CONSUMABLES',sub:'Utility',rarity:'D',weight:0.3,qty:4,icon:'red_light_stick'},
+  {id:225,name:'Blue Light Stick',category:'CONSUMABLES',sub:'Utility',rarity:'D',weight:0.3,qty:4,icon:'blue_light_stick'},
+  {id:226,name:'Green Light Stick',category:'CONSUMABLES',sub:'Utility',rarity:'D',weight:0.3,qty:4,icon:'green_light_stick'},
+  {id:227,name:'Yellow Light Stick',category:'CONSUMABLES',sub:'Utility',rarity:'D',weight:0.3,qty:4,icon:'yellow_light_stick'},
+  {id:228,name:'Acoustic Guitar',category:'CONSUMABLES',sub:'Gadget',rarity:'S',weight:1,qty:1,icon:'acoustic_guitar'},
+  {id:229,name:'ARC Alloy',category:'MATERIALS',sub:'Topside',rarity:'C',weight:0.25,qty:47,icon:'arc_alloy'},
+  {id:230,name:'ARC Circuitry',category:'MATERIALS',sub:'Topside',rarity:'B',weight:0.3,qty:18,icon:'arc_circuitry'},
+  {id:231,name:'ARC Motion Core',category:'MATERIALS',sub:'Topside',rarity:'B',weight:0.3,qty:12,icon:'arc_motion_core'},
+  {id:232,name:'ARC Powercell',category:'MATERIALS',sub:'Topside',rarity:'C',weight:0.5,qty:33,icon:'arc_powercell'},
+  {id:233,name:'Advanced ARC Powercell',category:'MATERIALS',sub:'Topside',rarity:'B',weight:0.5,qty:6,icon:'advanced_arc_powercell'},
+  {id:234,name:'ARC Coolant',category:'MATERIALS',sub:'Recyclable',rarity:'B',weight:1,qty:8,icon:'arc_coolant'},
+  {id:235,name:'ARC Flex Rubber',category:'MATERIALS',sub:'Recyclable',rarity:'B',weight:1,qty:5,icon:'arc_flex_rubber'},
+  {id:236,name:'ARC Performance Steel',category:'MATERIALS',sub:'Recyclable',rarity:'B',weight:1,qty:4,icon:'arc_performance_steel'},
+  {id:237,name:'ARC Synthetic Resin',category:'MATERIALS',sub:'Recyclable',rarity:'B',weight:1,qty:7,icon:'arc_synthetic_resin'},
+  {id:238,name:'ARC Thermo Lining',category:'MATERIALS',sub:'Recyclable',rarity:'B',weight:1,qty:5,icon:'arc_thermo_lining'},
+  {id:239,name:'Advanced Electrical Components',category:'MATERIALS',sub:'Refined',rarity:'B',weight:1,qty:8,icon:'advanced_electrical_components'},
+  {id:240,name:'Advanced Mechanical Components',category:'MATERIALS',sub:'Refined',rarity:'B',weight:1,qty:5,icon:'advanced_mechanical_components'},
+  {id:241,name:'Antiseptic',category:'MATERIALS',sub:'Refined',rarity:'B',weight:1,qty:4,icon:'antiseptic'},
+  {id:242,name:'Light Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'C',weight:0.3,qty:15,icon:'light_gun_parts'},
+  {id:243,name:'Medium Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'B',weight:0.5,qty:9,icon:'medium_gun_parts'},
+  {id:244,name:'Heavy Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'B',weight:1,qty:3,icon:'heavy_gun_parts'},
+  {id:245,name:'Complex Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'A',weight:1,qty:2,icon:'complex_gun_parts'},
+  {id:246,name:'Simple Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'D',weight:0.2,qty:22,icon:'simple_gun_parts'},
+  {id:247,name:'Mod Components',category:'MATERIALS',sub:'Parts',rarity:'B',weight:0.5,qty:6,icon:'mod_components'},
+  {id:248,name:'Mechanical Components',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.5,qty:12,icon:'mechanical_components'},
+  {id:249,name:'Electrical Components',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.5,qty:14,icon:'electrical_components'},
+  {id:250,name:'Rubber Parts',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:28,icon:'rubber_parts'},
+  {id:251,name:'Plastic Parts',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:25,icon:'plastic_parts'},
+  {id:252,name:'Metal Parts',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.4,qty:19,icon:'metal_parts'},
+  {id:253,name:'Metal Brackets',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:16,icon:'metal_brackets'},
+  {id:254,name:'Fabric',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.2,qty:20,icon:'fabric'},
+  {id:255,name:'Durable Cloth',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.3,qty:9,icon:'durable_cloth'},
+  {id:256,name:'Resin',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.3,qty:11,icon:'resin'},
+  {id:257,name:'Rubber Pad',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:14,icon:'rubber_pad'},
+  {id:258,name:'Chemicals',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.5,qty:8,icon:'chemicals'},
+  {id:259,name:'Canister',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.5,qty:3,icon:'canister'},
+  {id:260,name:'Coolant',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.5,qty:5,icon:'coolant'},
+  {id:261,name:'Oil',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:18,icon:'oil'},
+  {id:262,name:'Wires',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.2,qty:22,icon:'wires'},
+  {id:263,name:'Steel Spring',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.2,qty:12,icon:'steel_spring'},
+  {id:264,name:'Rope',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.3,qty:7,icon:'rope'},
+  {id:265,name:'Power Cable',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:15,icon:'power_cable'},
+  {id:266,name:'Power Bank',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.4,qty:5,icon:'power_bank'},
+  {id:267,name:'Power Rod',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:2,icon:'power_rod'},
+  {id:268,name:'Battery',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.3,qty:9,icon:'battery'},
+  {id:269,name:'Industrial Battery',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:3,icon:'industrial_battery'},
+  {id:270,name:'Processor',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:4,icon:'processor'},
+  {id:271,name:'Sensors',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:6,icon:'sensors'},
+  {id:272,name:'Energy Clip',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.2,qty:4,icon:'energy_clip'},
+  {id:273,name:'Motor',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:5,icon:'motor'},
+  {id:274,name:'Magnet',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.2,qty:18,icon:'magnet'},
+  {id:275,name:'Industrial Magnet',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:3,icon:'industrial_magnet'},
+  {id:276,name:'Signal Amplifier',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:3,icon:'signal_amplifier'},
+  {id:277,name:'Cooling Coil',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:4,icon:'cooling_coil'},
+  {id:278,name:'Cooling Fan',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:3,icon:'cooling_fan'},
+  {id:279,name:'Flow Controller',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'flow_controller'},
+  {id:280,name:'Rotary Encoder',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:3,icon:'rotary_encoder'},
+  {id:281,name:'Turbo Pump',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:2,icon:'turbo_pump'},
+  {id:282,name:'Water Pump',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:2,icon:'water_pump'},
+  {id:283,name:'Water Filter',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'water_filter'},
+  {id:284,name:'Voltage Converter',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'voltage_converter'},
+  {id:285,name:'Fertilizer',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:11,icon:'fertilizer'},
+  {id:286,name:'Sample Cleaner',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:3,icon:'sample_cleaner'},
+  {id:287,name:'Laboratory Reagents',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:3,icon:'laboratory_reagents'},
+  {id:288,name:'Speaker Component',category:'MATERIALS',sub:'Basic',rarity:'C',weight:0.3,qty:5,icon:'speaker_component'},
+  {id:289,name:'Radio Relay',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:3,icon:'radio_relay'},
+  {id:290,name:'Magnetron',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'magnetron'},
+  {id:291,name:'Magnetic Accelerator',category:'MATERIALS',sub:'Refined',rarity:'A',weight:0.5,qty:2,icon:'magnetic_accelerator'},
+  {id:292,name:'Spectrometer',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:2,icon:'spectrometer'},
+  {id:293,name:'Spectrum Analyzer',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'spectrum_analyzer'},
+  {id:294,name:'Spotter Relay',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.3,qty:4,icon:'spotter_relay'},
+  {id:295,name:'Snitch Scanner',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.3,qty:5,icon:'snitch_scanner'},
+  {id:296,name:'Hornet Driver',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.4,qty:4,icon:'hornet_driver'},
+  {id:297,name:'Wasp Driver',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.4,qty:3,icon:'wasp_driver'},
+  {id:298,name:'Tick Pod',category:'MATERIALS',sub:'ARC Part',rarity:'C',weight:0.2,qty:8,icon:'tick_pod'},
+  {id:299,name:'Fireball Burner',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.5,qty:3,icon:'fireball_burner'},
+  {id:300,name:'Shredder Gyro',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.4,qty:2,icon:'shredder_gyro'},
+  {id:301,name:'Sentinel Firing Core',category:'MATERIALS',sub:'ARC Part',rarity:'A',weight:0.5,qty:1,icon:'sentinel_firing_core'},
+  {id:302,name:'Bastion Cell',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.5,qty:3,icon:'bastion_cell'},
+  {id:303,name:'Bombardier Cell',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.5,qty:2,icon:'bombardier_cell'},
+  {id:304,name:'Leaper Pulse Unit',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.5,qty:3,icon:'leaper_pulse_unit'},
+  {id:305,name:'Matriarch Reactor',category:'MATERIALS',sub:'ARC Part',rarity:'S',weight:1,qty:1,icon:'matriarch_reactor'},
+  {id:306,name:'Queen Reactor',category:'MATERIALS',sub:'ARC Part',rarity:'S',weight:1,qty:1,icon:'queen_reactor'},
+  {id:307,name:'Rocket Thruster',category:'MATERIALS',sub:'ARC Part',rarity:'B',weight:0.5,qty:2,icon:'rocket_thruster'},
+  {id:308,name:'Damaged ARC Motion Core',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:9,icon:'damaged_arc_motion_core'},
+  {id:309,name:'Damaged ARC Powercell',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:11,icon:'damaged_arc_powercell'},
+  {id:310,name:'Damaged Fireball Burner',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.4,qty:4,icon:'damaged_fireball_burner'},
+  {id:311,name:'Damaged Heat Sink',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:5,icon:'damaged_heat_sink'},
+  {id:312,name:'Damaged Hornet Driver',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:7,icon:'damaged_hornet_driver'},
+  {id:313,name:'Damaged Rocketeer Driver',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.4,qty:3,icon:'damaged_rocketeer_driver'},
+  {id:314,name:'Damaged Tick Pod',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.2,qty:9,icon:'damaged_tick_pod'},
+  {id:315,name:'Damaged Wasp Driver',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:5,icon:'damaged_wasp_driver'},
+  {id:316,name:'Burned ARC Circuitry',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:7,icon:'burned_arc_circuity'},
+  {id:317,name:'Dried Out ARC Resin',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.3,qty:6,icon:'dried_out_arc_resin'},
+  {id:318,name:'Rusty ARC Steel',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.4,qty:4,icon:'rusty_arc_steel'},
+  {id:319,name:'Tattered ARC Lining',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.4,qty:6,icon:'tattered_arc_lining'},
+  {id:320,name:'Impure ARC Coolant',category:'MATERIALS',sub:'Damaged',rarity:'D',weight:0.5,qty:4,icon:'impure_arc_coolant'},
+  {id:321,name:'Spring Cushion',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.2,qty:10,icon:'spring_cushion'},
+  {id:322,name:'Light Bulb',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.1,qty:15,icon:'light_bulb'},
+  {id:323,name:'Polluted Air Filter',category:'MATERIALS',sub:'Recyclable',rarity:'D',weight:0.3,qty:5,icon:'polluted_air_filter'},
+  {id:324,name:'Explosive Compound',category:'MATERIALS',sub:'Explosive',rarity:'B',weight:0.5,qty:3,icon:'explosive_compound'},
+  {id:325,name:'ESR Analyzer',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'esr_analyzer'},
+  {id:326,name:'Exodus Modules',category:'MATERIALS',sub:'Special',rarity:'A',weight:0.5,qty:2,icon:'exodus_modules'},
+  {id:327,name:'Frequency Modulation Box',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'frequency_modulation_box'},
+  {id:328,name:'Industrial Charger',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.5,qty:2,icon:'industrial_charger'},
+  {id:329,name:'Telemetry Transceiver',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:2,icon:'telemetry_transceiver'},
+  {id:330,name:'Synthesized Fuel',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.4,qty:3,icon:'synthesized_fuel'},
+  {id:331,name:'Surveyor Vault',category:'MATERIALS',sub:'Special',rarity:'A',weight:0.5,qty:1,icon:'surveyor_vault'},
+  {id:332,name:'Heavy Ammo',category:'MATERIALS',sub:'Ammo',rarity:'C',weight:0.1,qty:45,icon:'heavy_ammo'},
+  {id:333,name:'Medium Ammo',category:'MATERIALS',sub:'Ammo',rarity:'D',weight:0.05,qty:80,icon:'medium_ammo'},
+  {id:334,name:'Light Ammo',category:'MATERIALS',sub:'Ammo',rarity:'D',weight:0.05,qty:95,icon:'light_ammo'},
+  {id:335,name:'Shotgun Ammo',category:'MATERIALS',sub:'Ammo',rarity:'C',weight:0.1,qty:30,icon:'shotgun_ammo'},
+  {id:336,name:'Launcher Ammo',category:'MATERIALS',sub:'Ammo',rarity:'B',weight:0.5,qty:6,icon:'launcher_ammo'},
+  {id:337,name:'Raider Hatch Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'raider_hatch_key'},
+  {id:338,name:'Dam Control Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'dam_control_tower_key'},
+  {id:339,name:'Dam Staff Room Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'dam_staff_room_key'},
+  {id:340,name:'Dam Surveillance Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'dam_surveillance_key'},
+  {id:341,name:'Dam Testing Annex Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'dam_testing_annex_key'},
+  {id:342,name:'Blue Gate Comm Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'blue_gate_communication_tower_key'},
+  {id:343,name:'Blue Gate Confiscation Room Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'blue_gate_confiscation_room_key'},
+  {id:344,name:'Buried City Town Hall Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'buried_city_town_hall_key'},
+  {id:345,name:'Spaceport Container Storage Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'spaceport_container_storage_key'},
+  {id:346,name:'Spaceport Control Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'spaceport_control_tower_key'},
+  {id:347,name:'Spaceport Trench Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'spaceport_trench_tower_key'},
+  {id:348,name:'Spaceport Warehouse Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'spaceport_warehouse_key'},
+  {id:349,name:'Stella Montis Archives Key',category:'KEYS',sub:'Key',rarity:'B',weight:0.1,qty:1,icon:'stella_montis_archives_key'},
+  {id:350,name:'Stella Montis Assembly Key',category:'KEYS',sub:'Key',rarity:'B',weight:0.1,qty:1,icon:'stella_montis_assembly_admin_key'},
+  {id:351,name:'Stella Montis Medical Key',category:'KEYS',sub:'Key',rarity:'B',weight:0.1,qty:1,icon:'stella_montis_medical_storage_key'},
+  {id:352,name:'Stella Montis Security Key',category:'KEYS',sub:'Key',rarity:'B',weight:0.1,qty:1,icon:'stella_montis_security_checkpoint_key'},
+  {id:353,name:'Agave',category:'NATURE',sub:'Plant',rarity:'C',weight:0.2,qty:5,icon:'agave'},
+  {id:354,name:'Apricot',category:'NATURE',sub:'Food',rarity:'C',weight:0.2,qty:4,icon:'apricot'},
+  {id:355,name:'Assorted Seeds',category:'NATURE',sub:'Plant',rarity:'D',weight:0.05,qty:12,icon:'assorted_seeds'},
+  {id:356,name:'Great Mullein',category:'NATURE',sub:'Plant',rarity:'C',weight:0.1,qty:4,icon:'great_mullein'},
+  {id:357,name:'Lemon',category:'NATURE',sub:'Food',rarity:'C',weight:0.1,qty:3,icon:'lemon'},
+  {id:358,name:'Moss',category:'NATURE',sub:'Plant',rarity:'D',weight:0.1,qty:8,icon:'moss'},
+  {id:359,name:'Mushroom',category:'NATURE',sub:'Plant',rarity:'C',weight:0.1,qty:5,icon:'mushroom'},
+  {id:360,name:'Prickly Pear',category:'NATURE',sub:'Food',rarity:'C',weight:0.2,qty:3,icon:'prickly_pear'},
+  {id:361,name:'Roots',category:'NATURE',sub:'Plant',rarity:'D',weight:0.1,qty:10,icon:'roots'},
+  {id:362,name:'Volcanic Rock',category:'NATURE',sub:'Mineral',rarity:'C',weight:0.5,qty:4,icon:'volcanic_rock'},
+  {id:363,name:'Air Freshener',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:2,icon:'air_freshener'},
+  {id:364,name:'Alarm Clock',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:2,qty:1,icon:'alarm_clock'},
+  {id:365,name:'Bicycle Pump',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'bicycle_pump'},
+  {id:366,name:'Bloated Tuna Can',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.3,qty:3,icon:'bloated_tuna_can'},
+  {id:367,name:'Breathtaking Snow Globe',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.5,qty:1,icon:'breathtaking_snow_globe'},
+  {id:368,name:'Broken Flashlight',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.3,qty:4,icon:'broken_flashlight'},
+  {id:369,name:'Broken Guidance System',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.5,qty:2,icon:'broken_guidance_system'},
+  {id:370,name:'Broken Handheld Radio',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.4,qty:3,icon:'broken_handheld_radio'},
+  {id:371,name:'Broken Taser',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.3,qty:2,icon:'broken_taser'},
+  {id:372,name:'Burnt Out Candle',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.2,qty:5,icon:'burnt_out_candle'},
+  {id:373,name:'Camera Lens',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:2,icon:'camera_lens'},
+  {id:374,name:'Candle Holder',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:2,icon:'candle_holder'},
+  {id:375,name:'Cat Bed',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'cat_bed'},
+  {id:376,name:'Coffee Pot',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:2,icon:'coffee_pot'},
+  {id:377,name:'Cracked Bioscanner',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.4,qty:3,icon:'cracked_bioscanner'},
+  {id:378,name:'Crumpled Plastic Bottle',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.1,qty:8,icon:'crumpled_plastic_bottle'},
+  {id:379,name:'Dart Board',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'dart_board'},
+  {id:380,name:'Deflated Football',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.3,qty:2,icon:'deflated_football'},
+  {id:381,name:'Diving Goggles',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'diving_goggles'},
+  {id:382,name:'Dog Collar',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:2,icon:'dog_collar'},
+  {id:383,name:'Duct Tape',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.2,qty:6,icon:'duct_tape'},
+  {id:384,name:'Empty Wine Bottle',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.3,qty:3,icon:'empty_wine_bottle'},
+  {id:385,name:'Expired Pasta',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.3,qty:2,icon:'expired_pasta'},
+  {id:386,name:'Expired Respirator',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.3,qty:3,icon:'expired_respirator'},
+  {id:387,name:'Faded Photograph',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.05,qty:3,icon:'faded_photograph'},
+  {id:388,name:'Film Reel',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'film_reel'},
+  {id:389,name:'Fine Wristwatch',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.1,qty:1,icon:'fine_wristwatch'},
+  {id:390,name:'Fried Motherboard',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.3,qty:3,icon:'fried_motherboard'},
+  {id:391,name:'Fruit Mix',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.2,qty:2,icon:'fruit_mix'},
+  {id:392,name:'Frying Pan',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.8,qty:1,icon:'frying_pan'},
+  {id:393,name:'Garlic Press',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.2,qty:2,icon:'garlic_press'},
+  {id:394,name:'Geiger Counter',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.4,qty:1,icon:'geiger_counter'},
+  {id:395,name:'Headphones',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.2,qty:1,icon:'headphones'},
+  {id:396,name:'Household Cleaner',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.3,qty:3,icon:'household_cleaner'},
+  {id:397,name:'Humidifier',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'humidifier'},
+  {id:398,name:'Ice Cream Scooper',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.1,qty:2,icon:'ice_cream_scooper'},
+  {id:399,name:'Microscope',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:1,qty:1,icon:'microscope'},
+  {id:400,name:'Mini Centrifuge',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'mini_centrifuge'},
+  {id:401,name:'Music Album',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:2,icon:'music_album'},
+  {id:402,name:'Music Box',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.3,qty:1,icon:'music_box'},
+  {id:403,name:'Number Plate',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.5,qty:2,icon:'number_plate'},
+  {id:404,name:'Olives',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.2,qty:2,icon:'olives'},
+  {id:405,name:'Painted Box',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'painted_box'},
+  {id:406,name:'Playing Cards',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:2,icon:'playing_cards'},
+  {id:407,name:'Portable TV',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.8,qty:1,icon:'portable_tv'},
+  {id:408,name:'Poster of Natural Wonders',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:1,icon:'poster_of_natural_wonders'},
+  {id:409,name:'Pottery',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'pottery'},
+  {id:410,name:'Projector',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.8,qty:1,icon:'projector'},
+  {id:411,name:'Radio',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'radio'},
+  {id:412,name:'Red Coral Jewelry',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.1,qty:1,icon:'red_coral_jewelry'},
+  {id:413,name:'Remote Control',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.1,qty:3,icon:'remote_control'},
+  {id:414,name:'Rosary',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:1,icon:'rosary'},
+  {id:415,name:'Rubber Duck',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:1,icon:'rubber_duck'},
+  {id:416,name:'Ruined Accordion',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'ruined_accordion'},
+  {id:417,name:'Ruined Baton',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.4,qty:2,icon:'ruined_baton'},
+  {id:418,name:'Ruined Handcuffs',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.2,qty:2,icon:'ruined_handcuffs'},
+  {id:419,name:'Ruined Parachute',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.5,qty:2,icon:'ruined_parachute'},
+  {id:420,name:'Ruined Riot Shield',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.8,qty:1,icon:'ruined_riot_shield'},
+  {id:421,name:'Ruined Tactical Vest',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.5,qty:2,icon:'ruined_tactical_vest'},
+  {id:422,name:'Rusted Bolts',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.1,qty:10,icon:'rusted_bolts'},
+  {id:423,name:'Rusted Gear',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.2,qty:7,icon:'rusted_gear'},
+  {id:424,name:'Rusted Shut Medical Kit',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.5,qty:2,icon:'rusted_shut_medical_kit'},
+  {id:425,name:'Rusted Tools',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.4,qty:4,icon:'rusted_tools'},
+  {id:426,name:'Shaker',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.2,qty:2,icon:'shaker'},
+  {id:427,name:'Silver Teaspoon Set',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.1,qty:1,icon:'silver_teaspoon_set'},
+  {id:428,name:'Statuette',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'statuette'},
+  {id:429,name:'Tattered Clothes',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.3,qty:4,icon:'tattered_clothes'},
+  {id:430,name:'Thermostat',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.2,qty:2,icon:'thermostat'},
+  {id:431,name:'Toaster',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.4,qty:1,icon:'toaster'},
+  {id:432,name:'Torn Blanket',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:0.2,qty:4,icon:'torn_blanket'},
+  {id:433,name:'Torn Book',category:'TRINKETS',sub:'Trinket',rarity:'D',weight:0.1,qty:3,icon:'torn_book'},
+  {id:434,name:'Unusable Weapon',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:1,qty:3,icon:'unusable_weapon'},
+  {id:435,name:'Vase',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'vase'},
+  {id:436,name:'Very Comfortable Pillow',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'very_comfortable_pillow'}
+];;;
+
+  const CATEGORIES = [
+    {id:'ALL',label:'ALL'},
+    {id:'WEAPONS',label:'WEAPONS'},
+    {id:'SHIELDS',label:'SHIELDS'},
+    {id:'AUGMENTS',label:'AUGMENTS'},
+    {id:'MODS',label:'MODS'},
+    {id:'CONSUMABLES',label:'CONSUMABLES'},
+    {id:'MATERIALS',label:'MATERIALS'},
+    {id:'KEYS',label:'KEYS'},
+    {id:'BLUEPRINTS',label:'BLUEPRINTS'},
+    {id:'NATURE',label:'NATURE'},
+    {id:'TRINKETS',label:'TRINKETS'},
+  ];
+
+  const filteredInventory = selectedCategory === 'ALL'
+    ? INVENTORY_DB
+    : INVENTORY_DB.filter(item => item.category === selectedCategory);
+
+  const calculateWeight = () => { let total = 0;
+    if (loadout.augment) total += loadout.augment.weight;
+    if (loadout.primary) total += loadout.primary.weight;
+    if (loadout.secondary) total += loadout.secondary.weight;
+    if (loadout.armor) total += loadout.armor.weight;
+    if (loadout.safePocket) total += loadout.safePocket.weight;
+    loadout.backpack.forEach(item => { if (item) total += item.weight; });
+    loadout.quickUse.forEach(item => { if (item) total += item.weight; });
+    return total.toFixed(1); };
+
+  const handleDragStart = (item, source) => { setDraggedItem(item);
+    setDragSource(source); };
+
+  const handleDragOver = (e) => { e.preventDefault(); };
+
+  const handleDrop = (targetSlot, targetIndex = null) => { if (!draggedItem) return;
+
+    const newLoadout = { ...loadout, backpack: [...loadout.backpack], quickUse: [...loadout.quickUse] };
+
+    if (dragSource === 'stash') { } else if (dragSource === 'augment') { newLoadout.augment = null; } else if (dragSource === 'primary') { newLoadout.primary = null; } else if (dragSource === 'secondary') { newLoadout.secondary = null; } else if (dragSource === 'armor') { newLoadout.armor = null; } else if (dragSource === 'safePocket') { newLoadout.safePocket = null; } else if (dragSource.startsWith('backpack-')) { const idx = parseInt(dragSource.split('-')[1]);
+    newLoadout.backpack[idx] = null; } else if (dragSource.startsWith('quick-')) { const idx = parseInt(dragSource.split('-')[1]);
+    newLoadout.quickUse[idx] = null; }
+
+    let validDrop = false;
+
+    if (targetSlot === 'augment') { if (draggedItem.category === 'AUGMENTS') { if (newLoadout.augment && (dragSource === 'augment' || dragSource === 'stash')) { }
+      newLoadout.augment = draggedItem;
+      validDrop = true; } } else if (targetSlot === 'primary' || targetSlot === 'secondary') { if (draggedItem.category === 'WEAPONS') { if (newLoadout[targetSlot]) { if (dragSource === 'primary' || dragSource === 'secondary') { newLoadout[dragSource] = newLoadout[targetSlot]; } }
+      newLoadout[targetSlot] = draggedItem;
+      validDrop = true; } } else if (targetSlot === 'armor') { if (draggedItem.category === 'SHIELDS' || draggedItem.category === 'ARMOR') { if (newLoadout.armor && (dragSource === 'armor' || dragSource === 'stash')) { }
+      newLoadout.armor = draggedItem;
+      validDrop = true; } } else if (targetSlot.startsWith('backpack-')) { if (newLoadout.backpack[targetIndex]) { if (dragSource.startsWith('backpack-')) { const sourceIdx = parseInt(dragSource.split('-')[1]);
+       newLoadout.backpack[sourceIdx] = newLoadout.backpack[targetIndex]; } }
+    newLoadout.backpack[targetIndex] = draggedItem;
+    validDrop = true; } else if (targetSlot.startsWith('quick-')) { if (draggedItem.category === 'CONSUMABLES') { if (newLoadout.quickUse[targetIndex]) { if (dragSource.startsWith('quick-')) { const sourceIdx = parseInt(dragSource.split('-')[1]);
+         newLoadout.quickUse[sourceIdx] = newLoadout.quickUse[targetIndex]; } }
+      newLoadout.quickUse[targetIndex] = draggedItem;
+      validDrop = true; } } else if (targetSlot === 'safePocket') { if (newLoadout.safePocket && dragSource !== 'stash') { if (dragSource === 'augment') newLoadout.augment = newLoadout.safePocket;
+      else if (dragSource === 'primary') newLoadout.primary = newLoadout.safePocket;
+      else if (dragSource === 'secondary') newLoadout.secondary = newLoadout.safePocket;
+      else if (dragSource === 'armor') newLoadout.armor = newLoadout.safePocket;
+      else if (dragSource.startsWith('backpack-')) { const idx = parseInt(dragSource.split('-')[1]);
+       newLoadout.backpack[idx] = newLoadout.safePocket; } }
+    newLoadout.safePocket = draggedItem;
+    validDrop = true; }
+
+    if (validDrop) { setLoadout(newLoadout); }
+
+    setDraggedItem(null);
+    setDragSource(null); };
+
+  const handleStashItemClick = (item) => { setHighlightedItem(item.id);
+    setTimeout(() => setHighlightedItem(null), 300);
+
+    const newLoadout = { ...loadout, backpack: [...loadout.backpack], quickUse: [...loadout.quickUse] };
+
+    if (item.category === 'WEAPONS') { if (!newLoadout.primary) { newLoadout.primary = item; } else if (!newLoadout.secondary) { newLoadout.secondary = item; } else { const emptyIdx = newLoadout.backpack.findIndex(slot => slot === null);
+      if (emptyIdx !== -1) { newLoadout.backpack[emptyIdx] = item; } } } else if (item.category === 'SHIELDS' || item.category === 'ARMOR') { if (!newLoadout.armor) { newLoadout.armor = item; } else { const emptyIdx = newLoadout.backpack.findIndex(slot => slot === null);
+      if (emptyIdx !== -1) { newLoadout.backpack[emptyIdx] = item; } } } else if (item.category === 'CONSUMABLES') { const emptyQuickIdx = newLoadout.quickUse.findIndex(slot => slot === null);
+    if (emptyQuickIdx !== -1) { newLoadout.quickUse[emptyQuickIdx] = item; } else { const emptyBackpackIdx = newLoadout.backpack.findIndex(slot => slot === null);
+      if (emptyBackpackIdx !== -1) { newLoadout.backpack[emptyBackpackIdx] = item; } } } else { const emptyIdx = newLoadout.backpack.findIndex(slot => slot === null);
+    if (emptyIdx !== -1) { newLoadout.backpack[emptyIdx] = item; } }
+
+    setLoadout(newLoadout); };
+
+  const handleRemoveItem = (slot, index = null) => { const newLoadout = { ...loadout, backpack: [...loadout.backpack], quickUse: [...loadout.quickUse] };
+
+    if (slot === 'augment') newLoadout.augment = null;
+    else if (slot === 'primary') newLoadout.primary = null;
+    else if (slot === 'secondary') newLoadout.secondary = null;
+    else if (slot === 'armor') newLoadout.armor = null;
+    else if (slot === 'safePocket') newLoadout.safePocket = null;
+    else if (slot.startsWith('backpack-')) newLoadout.backpack[index] = null;
+    else if (slot.startsWith('quick-')) newLoadout.quickUse[index] = null;
+
+    setLoadout(newLoadout); };
+
+  const handleEmptySlotClick = (slotType, slotIndex = null, e) => { const appEl = document.querySelector('.container');
+    const appRect = appEl ? appEl.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+    const slotEl = e && e.currentTarget;
+    const slotRect = slotEl ? slotEl.getBoundingClientRect() : { bottom: 100 };
+    let initCategory = null;
+    if (slotType === 'primary' || slotType === 'secondary') initCategory = 'WEAPONS';
+    else if (slotType === 'armor') initCategory = 'SHIELDS';
+    else if (slotType === 'augment') initCategory = 'AUGMENTS';
+    else if (slotType === 'quick') initCategory = 'CONSUMABLES';
+    setDropdown({ slotType, slotIndex,
+    category: initCategory,
+    top: slotRect.bottom + 4,
+    left: appRect.left,
+    right: window.innerWidth - appRect.right, }); };
+
+  const handleDropdownItemSelect = (item) => { if (!dropdown) return;
+    const { slotType, slotIndex } = dropdown;
+    const nl = { ...loadout, backpack: [...loadout.backpack], quickUse: [...loadout.quickUse] };
+    if (slotType === 'augment') nl.augment = item;
+    else if (slotType === 'primary') nl.primary = item;
+    else if (slotType === 'secondary') nl.secondary = item;
+    else if (slotType === 'armor') nl.armor = item;
+    else if (slotType === 'quick') nl.quickUse[slotIndex] = item;
+    else if (slotType === 'backpack') nl.backpack[slotIndex] = item;
+    else if (slotType === 'safePocket') nl.safePocket = item;
+    setLoadout(nl);
+    setDropdown(null); };
+
+  const getDropdownItems = () => { if (!dropdown || !dropdown.category) return [];
+    return INVENTORY_DB.filter(i => i.category === dropdown.category); };
+
+  const hasAllRes = (resources) => resources.every(r => r.have >= r.need);
+  const appBounds = () => { const el = document.querySelector('.container');
+    if (!el) return { left: 0, right: 0 };
+    const r = el.getBoundingClientRect();
+    return { left: r.left, right: window.innerWidth - r.right }; };
+
+  const DECKS = [
+  { num: '001', name: 'STARTER DECK', subtitle: 'RYDER & VOYAGER', pct: 100, done: true },
+  { num: '002', name: 'GOALIE DECK', subtitle: 'GOALIE', pct: 100, done: true },
+  { num: '003', name: 'SURGEON DECK', subtitle: 'SURGEON', pct: 8, done: false },
+ ];
+ const DECK_CHALLENGES = [
+  { label: 'Complete 1 Feat', pts: 10, done: true },
+  { label: 'Complete 3 Feats', pts: 30, done: true },
+  { label: 'Complete 5 Feats', pts: 40, done: false },
+  { label: 'Return safely from Dam', pts: 10, done: false },
+  { label: 'Supply Drops requested', pts: 10, done: false },
+  { label: 'Ticks destroyed', pts: 10, done: false },
+ ];
+ const WORKSHOP_STATIONS = [
+    { id:'gunsmith', name:'GUNSMITH', img:'gunsmith', level:2, blueprints:[
+    { id:'bp5', name:'Anvil I', tag:'WEAPON', rarity:'C', icon:'anvil_i', resources:[{name:'Light Gun Parts',have:15,need:8},{name:'ARC Alloy',have:47,need:5}] },
+    { id:'bp6', name:'Bobcat I', tag:'WEAPON', rarity:'C', icon:'bobcat_i', resources:[{name:'Light Gun Parts',have:15,need:10},{name:'ARC Powercell',have:33,need:3}] },
+    { id:'bp7', name:'Silencer II', tag:'MOD', rarity:'B', icon:'silencer_ii', resources:[{name:'Medium Gun Parts',have:9,need:4},{name:'Adv. Electrical',have:4,need:2}] },
+    { id:'bp8', name:'Compensator III', tag:'MOD', rarity:'A', icon:'compensator_iii', resources:[{name:'Heavy Gun Parts',have:3,need:3},{name:'Adv. Mechanical',have:5,need:2}] },
+    ]},
+    { id:'gearbench', name:'GEAR BENCH', img:'gearbench', level:1, blueprints:[
+    { id:'bp9', name:'Looting Mk.3 Cautious', tag:'AUGMENT', rarity:'S', icon:'looting_mk3_cautious', resources:[{name:'Adv. Electrical',have:4,need:6},{name:'ARC Circuitry',have:18,need:4}] },
+    { id:'bp10', name:'Looting Mk.3 Survivor', tag:'AUGMENT', rarity:'S', icon:'looting_mk3_survivor', resources:[{name:'Adv. Electrical',have:4,need:6},{name:'ARC Motion Core',have:12,need:2}] },
+    { id:'bp11', name:'Combat Mk.3 Aggressive', tag:'AUGMENT', rarity:'S', icon:'combat_mk3_aggressive', resources:[{name:'Adv. Mechanical',have:5,need:5},{name:'ARC Circuitry',have:18,need:3}] },
+    ]},
+    { id:'medicallab', name:'MEDICAL LAB', img:'medicallab', level:3, blueprints:[
+    { id:'bp12', name:'Vita Spray', tag:'MEDICAL', rarity:'A', icon:'vita_spray', resources:[{name:'Canister',have:2,need:1},{name:'Antiseptic',have:4,need:3}] },
+    { id:'bp13', name:'Vita Shot', tag:'MEDICAL', rarity:'B', icon:'vita_shot', resources:[{name:'Antiseptic',have:4,need:2},{name:'ARC Powercell',have:33,need:1}] },
+    { id:'bp14', name:'Defibrillator', tag:'MEDICAL', rarity:'A', icon:'defibrillator', resources:[{name:'Adv. Electrical',have:4,need:3},{name:'ARC Circuitry',have:18,need:2}] },
+    ]},
+    { id:'utilitystation', name:'UTILITY STATION', img:'utilitystation', level:3, blueprints:[
+    { id:'bp15', name:'Snap Hook', tag:'GADGET', rarity:'A', icon:'snap_hook', resources:[{name:'Adv. Mechanical',have:5,need:2},{name:'ARC Circuitry',have:18,need:1},{name:'Rope',have:0,need:3}] },
+    { id:'bp16', name:'Explosive Mine', tag:'EXPLOSIVE', rarity:'B', icon:'explosive_mine', resources:[{name:'ARC Alloy',have:47,need:6},{name:'ARC Powercell',have:33,need:2}] },
+    { id:'bp17', name:'Zipline', tag:'GADGET', rarity:'A', icon:'zipline', resources:[{name:'Adv. Mechanical',have:5,need:3},{name:'Rope',have:0,need:5}] },
+    ]},
+    { id:'refiner', name:'REFINER', img:'refiner', level:2, blueprints:[
+    { id:'bp18', name:'Adv. Electrical Components', tag:'MATERIAL', rarity:'B', icon:'advanced_electrical_components', resources:[{name:'Electrical Components',have:14,need:6},{name:'ARC Circuitry',have:18,need:2}] },
+    { id:'bp19', name:'Adv. Mechanical Components', tag:'MATERIAL', rarity:'B', icon:'advanced_mechanical_components', resources:[{name:'Mechanical Components',have:12,need:6},{name:'ARC Alloy',have:47,need:3}] },
+    { id:'bp20', name:'Medium Gun Parts', tag:'PARTS', rarity:'B', icon:'medium_gun_parts', resources:[{name:'Light Gun Parts',have:15,need:4},{name:'ARC Alloy',have:47,need:2}] },
+    { id:'bp21', name:'Heavy Gun Parts', tag:'PARTS', rarity:'B', icon:'heavy_gun_parts', resources:[{name:'Medium Gun Parts',have:9,need:3},{name:'ARC Circuitry',have:18,need:1}] },
+    ]},
+    { id:'explosivesstation', name:'EXPLOSIVES', img:'explosivesstation', level:2, blueprints:[
+    { id:'bp22', name:'Blaze Grenade', tag:'GRENADE', rarity:'B', icon:'blaze_grenade', resources:[{name:'ARC Powercell',have:33,need:2},{name:'Explosive Compound',have:3,need:2}] },
+    { id:'bp23', name:'Gas Mine', tag:'TRAP', rarity:'B', icon:'gas_mine', resources:[{name:'ARC Alloy',have:47,need:4},{name:'Explosive Compound',have:3,need:3}] },
+    { id:'bp24', name:'Trigger\'Nade', tag:'GRENADE', rarity:'A', icon:'trigger_nade', resources:[{name:'ARC Circuitry',have:18,need:2},{name:'Explosive Compound',have:3,need:4}] },
+    { id:'bp25', name:'Lure Grenade', tag:'GRENADE', rarity:'B', icon:'lure_grenade', resources:[{name:'ARC Alloy',have:47,need:3},{name:'ARC Powercell',have:33,need:1}] },
+    ]},
+  ];
+
+  const TRADERS = [
+    { id:'tianwen', name:'TIAN WEN', specialism:'GUN SHOP', trust:'TRUSTED', color:'#F59E0B', img:'tianwen', items:[
+    { id:'tw1', name:'Light Gun Parts', tag:'PARTS', rarity:'C', icon:'light_gun_parts', price:320 },
+    { id:'tw2', name:'Medium Gun Parts', tag:'PARTS', rarity:'B', icon:'medium_gun_parts', price:680 },
+    { id:'tw3', name:'Heavy Gun Parts', tag:'PARTS', rarity:'B', icon:'heavy_gun_parts', price:1200 },
+    { id:'tw4', name:'Anvil I', tag:'WEAPON', rarity:'C', icon:'anvil_i', price:5000 },
+    { id:'tw5', name:'Bobcat I', tag:'WEAPON', rarity:'C', icon:'bobcat_i', price:4800 },
+    { id:'tw6', name:'Burletta I', tag:'WEAPON', rarity:'C', icon:'burletta_i', price:3200 },
+    { id:'tw7', name:'Silencer I', tag:'MOD', rarity:'C', icon:'silencer_i', price:640 },
+    { id:'tw8', name:'Angled Grip I', tag:'MOD', rarity:'C', icon:'angled_grip_i', price:640 },
+    { id:'tw9', name:'Compensator I', tag:'MOD', rarity:'C', icon:'compensator_i', price:640 },
+    ]},
+    { id:'shani', name:'SHANI', specialism:'SECURITY', trust:'NEUTRAL', color:'#06B6D4', img:'shani', items:[
+    { id:'sh1', name:'Light Shield', tag:'SHIELD', rarity:'C', icon:'light_shield', price:400 },
+    { id:'sh2', name:'Medium Shield', tag:'SHIELD', rarity:'B', icon:'medium_shield', price:1800 },
+    { id:'sh3', name:'Heavy Shield', tag:'SHIELD', rarity:'A', icon:'heavy_shield', price:4500 },
+    { id:'sh4', name:'Binoculars', tag:'QUICK USE', rarity:'C', icon:'binoculars', price:200 },
+    { id:'sh5', name:'Tagging Grenade', tag:'GRENADE', rarity:'C', icon:'tagging_grenade', price:450 },
+    { id:'sh6', name:'Raider Hatch Key', tag:'KEY', rarity:'C', icon:'raider_hatch_key', price:800 },
+    ]},
+    { id:'apollo', name:'APOLLO', specialism:'GRENADES & GADGETS', trust:'NEUTRAL', color:'#10B981', img:'apollo', items:[
+    { id:'ap1', name:'Smoke Grenade', tag:'GRENADE', rarity:'C', icon:'smoke_grenade', price:450 },
+    { id:'ap2', name:'Blaze Grenade', tag:'GRENADE', rarity:'B', icon:'blaze_grenade', price:810 },
+    { id:'ap3', name:'Gas Grenade', tag:'GRENADE', rarity:'B', icon:'gas_grenade', price:720 },
+    { id:'ap4', name:'Blue Light Stick', tag:'QUICK USE', rarity:'C', icon:'blue_light_stick', price:120 },
+    { id:'ap5', name:'Snap Hook', tag:'GADGET', rarity:'A', icon:'snap_hook', price:3000 },
+    { id:'ap6', name:'Explosive Mine', tag:'TRAP', rarity:'B', icon:'explosive_mine', price:1920 },
+    { id:'ap7', name:'Jolt Mine', tag:'TRAP', rarity:'B', icon:'jolt_mine', price:1920 },
+    ]},
+    { id:'lance', name:'LANCE', specialism:'CLINIC', trust:'TRUSTED', color:'#EC4899', img:'lance', items:[
+    { id:'la1', name:'Vita Shot', tag:'HEALING', rarity:'B', icon:'vita_shot', price:800 },
+    { id:'la2', name:'Vita Spray', tag:'HEALING', rarity:'A', icon:'vita_spray', price:2400 },
+    { id:'la3', name:'Adrenaline Shot', tag:'HEALING', rarity:'C', icon:'adrenaline_shot', price:300 },
+    { id:'la4', name:'Bandage', tag:'HEALING', rarity:'D', icon:'bandage', price:80 },
+    { id:'la5', name:'Shield Recharger', tag:'SHIELD', rarity:'B', icon:'shield_recharger', price:1000 },
+    { id:'la6', name:'Defibrillator', tag:'MEDICAL', rarity:'A', icon:'defibrillator', price:3200 },
+    ]},
+    { id:'celeste', name:'CELESTE', specialism:'SURPLUS', trust:'NEUTRAL', color:'#8B5CF6', img:'celeste', items:[
+    { id:'ce1', name:'ARC Alloy', tag:'MATERIAL', rarity:'C', icon:'arc_alloy', price:200 },
+    { id:'ce2', name:'ARC Powercell', tag:'MATERIAL', rarity:'C', icon:'arc_powercell', price:270 },
+    { id:'ce3', name:'ARC Circuitry', tag:'MATERIAL', rarity:'B', icon:'arc_circuitry', price:580 },
+    { id:'ce4', name:'Antiseptic', tag:'MATERIAL', rarity:'B', icon:'antiseptic', price:1000 },
+    { id:'ce5', name:'Assorted Seeds', tag:'NATURE', rarity:'C', icon:'assorted_seeds', price:100 },
+    { id:'ce6', name:'Mod Components', tag:'PARTS', rarity:'B', icon:'mod_components', price:450 },
+    ]},
+  ];
+
+  const RAIDER_MENU = [
+    { id: 'customization', icon: '◎', label: 'CUSTOM', subs: [['APPEARANCE','Outfit, colors, accessories'],['STYLE','Emotes and poses'],['EMOTES','Manage equipped emotes'],['SCRAPPY','Your companion rooster']] },
+    { id: 'settings', icon: '⚙', label: 'SETTINGS', subs: [['CONTROLS','Key bindings and input'],['AUDIO','Volume and sound'],['DISPLAY','Graphics and performance'],['ACCESSIBILITY','Colorblind and text']] },
+    { id: 'trials', icon: '△', label: 'TRIALS', subs: [] },
+    { id: 'projects', icon: '◈', label: 'PROJECTS', subs: [] },
+    { id: 'codex', icon: '▣', label: 'CODEX', subs: [['HISTORY','The world before ARC'],['PEOPLE','Survivors and traders'],['TOLEDO','The last settlement'],['ARC','The robotic collective'],['TOPSIDE','The surface world']] },
+
+  ];
+
+  return (
+    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif',
+    background: 'transparent',
+    minHeight: '100vh',
+    color: '#fff',
+    padding: 0,
+    margin: 0 }}>
+    <style>{`      @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;800&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+      .container { max-width: 480px;
+      margin: 0 auto;
+      background: transparent;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column; }
+      .header { background: rgba(15, 20, 25, 0.98);
+      border-bottom: 2px solid #F59E0B;
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px); }
+.player-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+      .player-name { font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #F59E0B;
+      letter-spacing: 2px; }
+      .currencies { display: flex;
+      gap: 12px;
+      font-size: 0.85rem;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600; }
+.currency { display: flex; align-items: center; gap: 4px; }
+.nav-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+      .nav-tab { flex: 1;
+      min-width: 0;
+      padding: 10px 6px;
+      background: rgba(55, 65, 81, 0.3);
+      border: 1px solid #374151;
+      color: #9CA3AF;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+      white-space: nowrap; }
+.nav-tab.active { background: #F59E0B; color: #000; border-color: #F59E0B; font-weight: 700; }
+.nav-tab:active { transform: scale(0.98); }
+.main-content { flex: 1; padding: 16px; overflow-y: auto; }
+      .section-title { font-family: 'Rajdhani', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #F59E0B;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: center; }
+.section-count { font-size: 0.85rem; color: #9CA3AF; font-weight: 600; }
+      .category-sidebar { display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 0; }
+.category-sidebar::-webkit-scrollbar { display: none; }
+      .category-btn { min-width: 60px;
+      padding: 8px 12px;
+      background: rgba(55, 65, 81, 0.5);
+      border: 2px solid #374151;
+      color: #9CA3AF;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px; }
+.category-btn .icon { font-size: 1.5rem; }
+.category-btn.active { background: rgba(245, 158, 11, 0.2); border-color: #F59E0B; color: #F59E0B; }
+.category-btn:active { transform: scale(0.95); }
+      .stash-grid { display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 12px;
+      background: rgba(15, 20, 25, 0.6);
+      border: 1px solid #374151;
+      border-radius: 4px; }
+      .stash-item { aspect-ratio: 1; position: relative;
+      background: rgba(30, 41, 59, 0.9);
+      border: 2px solid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: grab;
+      transition: all 0.2s ease;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+      position: relative; }
+.stash-item:active { cursor: grabbing; transform: scale(0.95); }
+.stash-item.highlighted { animation: pulse 0.3s ease; }
+      @keyframes pulse { 0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); } }
+      .stash-item.rarity-S { border-color: #EC4899; box-shadow: 0 0 8px rgba(236, 72, 153, 0.3); }
+      .stash-item.rarity-A { border-color: #F59E0B; box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); }
+      .stash-item.rarity-B { border-color: #06B6D4; box-shadow: 0 0 8px rgba(6, 182, 212, 0.3); }
+      .stash-item.rarity-C { border-color: #6B7280; }
+      .stash-item.rarity-D { border-color: #374151; }
+      .item-icon { width: 100%;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 0;
+      padding: 0; }
+      .item-name { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-align: center;
+      color: #E5E7EB;
+      letter-spacing: 0.5px;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; }
+      .loadout-section { background: rgba(15, 20, 25, 0.6);
+      border: 1px solid #374151;
+      padding: 16px;
+      border-radius: 4px;
+      margin-top: 16px; }
+.slot-row { display: grid; gap: 8px; margin-bottom: 12px; }
+      .slot-row.equipment { grid-template-columns: 1fr 1fr; }
+      .slot-row.backpack { grid-template-columns: repeat(2, 1fr); }
+      .slot-row.quick { grid-template-columns: repeat(2, 1fr); }
+      .slot-label { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #9CA3AF;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px; }
+      .slot { background: rgba(30, 41, 59, 0.8);
+      border: 2px solid #374151;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+      position: relative;
+      aspect-ratio: 1; }
+.slot.small { padding: 8px; aspect-ratio: 1; }
+.slot.has-item { border-color: #F59E0B; background: rgba(245, 158, 11, 0.05); cursor: grab; }
+.slot.has-item:active { cursor: grabbing; }
+.slot:active { transform: scale(0.98); }
+.slot.dragging-source { opacity: 0.5; border-style: dashed; }
+.slot.valid-drop-target { border-color: #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); animation: dropPulse 1s ease infinite; }
+      @keyframes dropPulse { 0%, 100% { border-color: #10B981; }
+      50% { border-color: #34D399; } }
+      .empty-slot-text { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #4B5563;
+      letter-spacing: 1px; }
+.empty-slot-icon { font-size: 1.8rem; color: #374151; margin-bottom: 4px; }
+      .footer { position: sticky;
+      bottom: 0;
+      background: rgba(15, 20, 25, 0.98);
+      border-top: 2px solid #F59E0B;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      z-index: 100; }
+.weight-display { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; }
+.weight-display.overweight { color: #EF4444; animation: weightPulse 1s ease infinite; }
+      @keyframes weightPulse { 0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; } }
+      .lock-button { padding: 10px 20px;
+      background: #F59E0B;
+      border: none;
+      color: #000;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+      transition: all 0.2s ease; }
+.lock-button:active { transform: scale(0.95); background: #D97706; }
+.placeholder-content { padding: 60px 20px; text-align: center; }
+      .dropdown-overlay { position: fixed;
+      background: rgba(6,10,18,0.97);
+      border: 1px solid #F59E0B;
+      border-radius: 4px;
+      z-index: 999;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.9);
+      animation: dropIn 0.15s ease;
+      overflow: hidden;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column; }
+      @keyframes dropIn { from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); } }
+      .dropdown-header { display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #1f2937;
+      gap: 8px;
+      flex-shrink: 0; }
+      .dropdown-title { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #F59E0B;
+      letter-spacing: 2px;
+      flex: 1;
+      text-align: center; }
+      .dropdown-close-btn { background: none;
+      border: none;
+      color: #6B7280;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1; }
+      .dropdown-back-btn { background: none;
+      border: none;
+      color: #9CA3AF;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+      letter-spacing: 1px; }
+.dropdown-cat-list { overflow-y: auto; padding: 4px 0; }
+      .dropdown-cat-btn { width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid #111b26;
+      color: #D1D5DB;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-align: left; }
+      .dropdown-cat-btn:active { background: rgba(245,158,11,0.08); }
+      .dropdown-cat-btn-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+      .dropdown-cat-btn-arrow { margin-left: auto; color: #4B5563; }
+      .dropdown-items-grid { display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 10px;
+      overflow-y: auto; }
+      .dropdown-item-card { background: rgba(30,41,59,0.9);
+      border: 1.5px solid;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      cursor: pointer;
+      clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px); }
+      .dropdown-item-card:active { opacity: 0.7; }
+      .dropdown-item-card.rarity-S { border-color: #EC4899; }
+      .dropdown-item-card.rarity-A { border-color: #F59E0B; }
+      .dropdown-item-card.rarity-B { border-color: #06B6D4; }
+      .dropdown-item-card.rarity-C { border-color: #374151; }
+      .dropdown-item-icon { font-size: 1.5rem; line-height: 1; }
+      .dropdown-item-name { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.48rem;
+      color: #9CA3AF;
+      margin-top: 2px;
+      text-align: center;
+      line-height: 1.2; }
+      .dropdown-empty { grid-column: 1 / -1;
+      text-align: center;
+      padding: 28px 0;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      color: #4B5563;
+      letter-spacing: 2px; }
+      .stash-item-wrap { position: relative; }
+      .stash-item-action-btn { position: absolute;
+      top: 3px; right: 3px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: #6B7280;
+      font-size: 0.7rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      z-index: 2;
+      border-radius: 2px;
+      line-height: 1; }
+      .stash-item-action-btn:active { color: #F59E0B; }
+      .station-bar { display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      scrollbar-width: none;
+      margin-bottom: 4px; }
+      .station-bar::-webkit-scrollbar { display: none; }
+      .station-btn { flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: rgba(30,41,59,0.7);
+      border: 1.5px solid #374151;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+      min-width: 68px; }
+      .station-btn.active { border-color: #F59E0B; background: rgba(245,158,11,0.1); }
+      .station-btn:active { transform: scale(0.95); }
+      .station-btn-icon { font-size: 1.4rem; }
+      .station-btn-name { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: #9CA3AF;
+      letter-spacing: 1px;
+      text-align: center; }
+      .station-btn.active .station-btn-name { color: #F59E0B; }
+.blueprint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .blueprint-card { background: rgba(30,41,59,0.8);
+      border: 1.5px solid #374151;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+      .blueprint-card:active { transform: scale(0.95); border-color: #F59E0B; }
+      .blueprint-card.rarity-S { border-color: #EC4899; }
+      .blueprint-card.rarity-A { border-color: #F59E0B; }
+      .blueprint-card.rarity-B { border-color: #06B6D4; }
+      .blueprint-icon { width: 100%; aspect-ratio: 1; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .blueprint-name { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.58rem;
+      font-weight: 600;
+      color: #D1D5DB;
+      text-align: center;
+      letter-spacing: 0.5px;
+      line-height: 1.2; }
+      .traders-layout { display: flex; gap: 10px; }
+      .trader-list { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+      .trader-avatar-btn { width: 48px; height: 48px;
+      border-radius: 4px;
+      border: 2px solid #374151;
+      background: rgba(30,41,59,0.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      clip-path: polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+      transition: all 0.15s; }
+      .trader-avatar-btn.active { border-color: #F59E0B; }
+      .trader-avatar-btn:active { transform: scale(0.93); }
+      .trader-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.trader-name { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; color: #F59E0B; letter-spacing: 2px; }
+.trader-trust { font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+.trader-subtabs { display: flex; border-bottom: 1px solid #1f2937; margin-bottom: 10px; }
+      .trader-subtab { background: none; border: none;
+      border-bottom: 2px solid transparent;
+      color: #6B7280;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 6px 12px 6px 0;
+      cursor: pointer; margin-bottom: -1px; }
+      .trader-subtab.active { color: #F59E0B; border-bottom-color: #F59E0B; }
+.trader-shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; overflow-y: auto; flex: 1; }
+      .shop-item-card { background: rgba(30,41,59,0.8);
+      border: 1.5px solid;
+      aspect-ratio: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 6px 4px;
+      cursor: pointer;
+      clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+      transition: transform 0.12s; }
+      .shop-item-card:active { transform: scale(0.93); }
+      .shop-item-card.rarity-S { border-color: #EC4899; }
+      .shop-item-card.rarity-A { border-color: #F59E0B; }
+      .shop-item-card.rarity-B { border-color: #06B6D4; }
+      .shop-item-card.rarity-C { border-color: #374151; }
+      .shop-item-icon { font-size: 1.6rem; line-height: 1; }
+.shop-item-name { font-family: 'Rajdhani', sans-serif; font-size: 0.5rem; color: #9CA3AF; margin-top: 3px; text-align: center; line-height: 1.2; }
+.shop-item-price { font-family: 'Rajdhani', sans-serif; font-size: 0.55rem; font-weight: 700; color: #F59E0B; margin-top: 2px; }
+      .quest-card { background: rgba(30,41,59,0.6);
+      border: 1px solid #374151;
+      border-left: 3px solid #F59E0B;
+      padding: 12px; margin-bottom: 8px;
+      clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+      .quest-name { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; color: #F59E0B; letter-spacing: 1px; margin-bottom: 4px; }
+      .quest-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.72rem; color: #9CA3AF; line-height: 1.4; }
+      .quest-reward { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; color: #10B981; margin-top: 6px; }
+      @keyframes raiderpulse { 0%,100% { opacity: 1; }
+      50% { opacity: 0.7; } }
+      @keyframes dailyPulse { 0%,100% { box-shadow: 0 0 10px rgba(245,158,11,0.3); }
+      50% { box-shadow: 0 0 20px rgba(245,158,11,0.6); } }
+      @keyframes slideUpFade { from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); } }
+      @keyframes modalPop { from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); } }
+.raider-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 58px); margin: -16px; }
+      .raider-spacer { flex: 1; position: relative; }
+.raider-rank-label { position: absolute; top: 18px; left: 18px; pointer-events: none; }
+.raider-rank-sup { font-family: 'Rajdhani', sans-serif; font-size: 0.6rem; font-weight: 700; color: rgba(245,158,11,0.7); letter-spacing: 2px; text-shadow: 0 1px 8px rgba(0,0,0,0.9); }
+.raider-rank-name { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 2px; text-shadow: 0 2px 16px rgba(0,0,0,1); }
+.raider-bottom { flex-shrink: 0; background: transparent; }
+.raider-submenu-wrap { padding: 0 12px 8px; animation: slideUpFade 0.2s ease; }
+      .raider-submenu-inner { background: rgba(8,13,20,0.97);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 8px;
+      padding: 6px 0;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.8); }
+      .raider-submenu-title { font-family: 'Rajdhani', sans-serif;
+      font-size: 0.62rem; font-weight: 700;
+      color: #F59E0B; letter-spacing: 2.5px;
+      padding: 8px 16px 6px;
+      border-bottom: 1px solid rgba(245,158,11,0.15);
+      margin-bottom: 2px; }
+.raider-menu-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+      .raider-menu-row:last-child { border-bottom: none; }
+      .raider-menu-row:active { background: rgba(245,158,11,0.06); }
+      .raider-menu-icon { font-size: 1rem; width: 22px; text-align: center; color: #F59E0B; }
+      .raider-menu-label { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; color: #E5E7EB; letter-spacing: 1.5px; }
+      .raider-menu-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.6rem; color: #6B7280; margin-top: 1px; }
+      .raider-menu-arrow { margin-left: auto; color: #4B5563; font-size: 0.9rem; }
+      .project-card { background: rgba(30,41,59,0.5);
+      border: 1px solid rgba(245,158,11,0.15);
+      border-left: 2px solid #F59E0B;
+      padding: 10px 12px; margin-bottom: 6px;
+      clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+      .project-name { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; font-weight: 700; color: #F59E0B; letter-spacing: 1px; margin-bottom: 2px; }
+      .project-bar { height: 3px; background: #1f2937; border-radius: 2px; margin: 5px 0 2px; overflow: hidden; }
+      .project-fill { height: 100%; border-radius: 2px; }
+.daily-strip { padding: 10px 14px 12px; background: rgba(5,9,15,0.88); border-top: 1px solid rgba(245,158,11,0.15); }
+.daily-strip-label { font-family: 'Rajdhani', sans-serif; font-size: 0.58rem; font-weight: 700; color: rgba(245,158,11,0.55); letter-spacing: 2.5px; text-align: center; margin-bottom: 8px; }
+      .daily-strip-row { display: flex;
+      flex-direction: row;
+      gap: 4px;
+      align-items: flex-end;
+      justify-content: center; }
+      .daily-slot { display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex: 1;
+      max-width: 46px;
+      cursor: default; }
+      .daily-slot.clickable { cursor: pointer; }
+      .daily-slot.clickable:active { transform: scale(0.93); }
+      .daily-icon-box { width: 34px; height: 34px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      position: relative; }
+.daily-icon-box.claimed { background: rgba(16,185,129,0.1); border: 1.5px solid rgba(16,185,129,0.4); }
+      .daily-icon-box.claimed::after { content: '✓';
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; color: #10B981;
+      background: rgba(0,0,0,0.45);
+      border-radius: 5px; }
+.daily-icon-box.current { background: rgba(245,158,11,0.15); border: 2px solid #F59E0B; animation: dailyPulse 2s ease-in-out infinite; }
+.daily-icon-box.upcoming { background: rgba(20,30,45,0.6); border: 1.5px solid rgba(55,65,81,0.5); opacity: 0.45; }
+.daily-day-num { font-family: 'Rajdhani', sans-serif; font-size: 0.48rem; font-weight: 700; letter-spacing: 0.5px; text-align: center; }
+.daily-day-status { font-family: 'Rajdhani', sans-serif; font-size: 0.42rem; letter-spacing: 0.5px; text-align: center; }
+.daily-connector { width: 4px; height: 2px; border-radius: 1px; flex-shrink: 0; margin-bottom: 22px; }
+      .raider-icon-row { display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: center;
+      background: rgba(5,9,15,0.95);
+      border-top: 1px solid rgba(245,158,11,0.2);
+      padding: 10px 8px 16px; }
+      .raider-icon-btn { width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(55,65,81,0.8);
+      background: rgba(15,22,32,0.7);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer; transition: all 0.15s; }
+.raider-icon-btn.active { border-color: #F59E0B; background: rgba(245,158,11,0.1); box-shadow: 0 0 16px rgba(245,158,11,0.2); }
+      .raider-icon-btn:active { transform: scale(0.91); }
+.raider-icon-label { font-family: 'Rajdhani', sans-serif; font-size: 0.42rem; font-weight: 700; color: #6B7280; letter-spacing: 0.5px; margin-top: 3px; }
+      .raider-icon-btn.active .raider-icon-label { color: #F59E0B; }
+.daily-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 900; display: flex; align-items: center; justify-content: center; }
+      .daily-modal { position: relative;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: #0a1320;
+      border: 1.5px solid #F59E0B;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(245,158,11,0.2);
+      animation: modalPop 0.2s ease; }
+.daily-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 1px solid rgba(245,158,11,0.2); }
+.daily-modal-title { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; color: #F59E0B; letter-spacing: 2px; }
+      .daily-modal-close { width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid #374151;
+      background: rgba(30,41,59,0.8);
+      color: #9CA3AF; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; }
+      .daily-modal-close:active { border-color: #F59E0B; color: #F59E0B; }
+      .daily-modal-body { width: 100%;
+      aspect-ratio: 16/9;
+      background: #060c12;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative; }
+      .daily-modal-body video { width: 100%; height: 100%; object-fit: cover; }
+.daily-modal-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.daily-modal-footer { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(245,158,11,0.15); }
+.daily-modal-sub { font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; color: #9CA3AF; letter-spacing: 2px; text-align: center; }
+.sheet-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 800; }
+      .sheet { position: fixed; bottom: 0;
+      background: #0d1620;
+      border-top: 2px solid #F59E0B;
+      border-left: 1px solid #374151;
+      border-right: 1px solid #374151;
+      border-radius: 12px 12px 0 0;
+      z-index: 801; padding: 16px;
+      animation: slideUp 0.22s ease;
+      max-height: 72vh; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 10px; }
+      @keyframes slideUp { from { transform: translateY(100%); }
+      to { transform: translateY(0); } }
+      .sheet-handle { width: 36px; height: 3px; background: #374151; border-radius: 2px; margin: 0 auto 2px; }
+      .sheet-tag { display: inline-block;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      background: rgba(245,158,11,0.15);
+      color: #F59E0B;
+      border: 1px solid rgba(245,158,11,0.3);
+      margin-right: 4px; }
+      .sheet-tag.S { background: rgba(236,72,153,0.15); color: #EC4899; border-color: rgba(236,72,153,0.3); }
+      .sheet-tag.A { background: rgba(245,158,11,0.15); color: #F59E0B; border-color: rgba(245,158,11,0.3); }
+      .sheet-tag.B { background: rgba(6,182,212,0.15); color: #06B6D4; border-color: rgba(6,182,212,0.3); }
+      .sheet-tag.C { background: rgba(107,114,128,0.15); color: #9CA3AF; border-color: rgba(107,114,128,0.3); }
+      .sheet-title { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: 1px; }
+      .sheet-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; color: #9CA3AF; line-height: 1.5; }
+      .sheet-res-label { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; color: #6B7280; letter-spacing: 2px; margin-bottom: 2px; }
+      .sheet-res-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #111b26; }
+      .sheet-res-row:last-child { border-bottom: none; }
+      .sheet-res-name { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; color: #D1D5DB; }
+      .sheet-res-count { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; font-weight: 700; }
+      .sheet-res-count.ok { color: #10B981; }
+      .sheet-res-count.no { color: #EF4444; }
+      .sheet-warn { font-family: 'Rajdhani', sans-serif; font-size: 0.72rem; color: #EF4444; text-align: center; letter-spacing: 1px; }
+      .sheet-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+      .sheet-stat-label { font-family: 'Rajdhani', sans-serif; font-size: 0.63rem; color: #6B7280; letter-spacing: 1px; margin-bottom: 3px; }
+      .sheet-stat-bar { height: 4px; background: #1f2937; border-radius: 2px; overflow: hidden; }
+      .sheet-stat-fill { height: 100%; background: linear-gradient(90deg,#F59E0B,#FCD34D); border-radius: 2px; }
+      .sheet-price-row { display: flex; align-items: baseline; gap: 6px; }
+      .sheet-price-label { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; color: #6B7280; letter-spacing: 1.5px; }
+      .sheet-price-val { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; color: #F59E0B; }
+      .sheet-btn { width: 100%; padding: 13px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.9rem; font-weight: 700; letter-spacing: 2px;
+      cursor: pointer; border: none;
+      clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+      transition: all 0.15s; }
+      .sheet-btn-primary { background: #F59E0B; color: #000; }
+      .sheet-btn-primary:active { background: #D97706; transform: scale(0.98); }
+      .sheet-btn-primary:disabled { background: #374151; color: #6B7280; cursor: not-allowed; }
+      .sheet-btn-secondary { background: rgba(30,41,59,0.8); color: #9CA3AF; border: 1px solid #374151 !important; }
+      .sheet-btn-secondary:active { border-color: #F59E0B !important; color: #F59E0B; }
+      .sheet-action-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      .sheet-action-btn { padding: 12px 4px; text-align: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer;
+      background: rgba(30,41,59,0.8);
+      border: 1px solid #374151; color: #9CA3AF;
+      clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+      transition: all 0.15s; }
+      .sheet-action-btn:active { border-color: #F59E0B; color: #F59E0B; transform: scale(0.95); }`}</style>
+
+    <div className="container" onClick={() => dropdown && setDropdown(null)}>
+
+      <div className="header">
+       <div className="player-info">
+         <div className="player-name">SAMSTAR | LVL 75</div>
+         <div className="currencies">
+          <div className="currency">💰 6,838,869</div>
+          <div className="currency">💎 530</div>
+         </div>
+       </div>
+
+       <div className="nav-tabs">
+         {['RAIDER', 'INVENTORY', 'WORKSHOP', 'TRADERS', 'DECKS'].map(tab => (
+          <button
+            key={tab}
+            className={`nav-tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+         ))}
+       </div>
+      </div>
+
+      <div className="main-content" ref={mainContentRef}>
+       {activeTab === 'INVENTORY' && (
+         <>
+
+          <div className="loadout-section">
+            <div className="section-title">
+             LOADOUT
+             <span className="section-count">{calculateWeight()}kg / 40kg</span>
+            </div>
+
+            <div className="slot-label">AUGMENT & SHIELD</div>
+            <div className="slot-row equipment">
+             <div
+               className={`slot ${loadout.augment ? 'has-item' : ''}`}
+               draggable={!!loadout.augment}
+               onDragStart={() => loadout.augment && handleDragStart(loadout.augment, 'augment')}
+               onDragOver={handleDragOver}
+               onDrop={() => handleDrop('augment')}
+               onDoubleClick={() => loadout.augment && handleRemoveItem('augment')}
+               onClick={(e) => !loadout.augment && handleEmptySlotClick('augment', null, e)}
+             >
+               {loadout.augment ? (
+                <>
+                  <div className="item-icon"><img src={`assets/items/${loadout.augment.icon}.png`} alt={loadout.augment.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.augment.sub||loadout.augment.category}</div></div>
+                  <div className="item-name">{loadout.augment.name}</div>
+                </>
+               ) : (
+                <>
+                  <div className="empty-slot-icon">⚡</div>
+                  <div className="empty-slot-text">AUGMENT</div>
+                </>
+               )}
+             </div>
+             <div
+               className={`slot ${loadout.armor ? 'has-item' : ''}`}
+               draggable={!!loadout.armor}
+               onDragStart={() => loadout.armor && handleDragStart(loadout.armor, 'armor')}
+               onDragOver={handleDragOver}
+               onDrop={() => handleDrop('armor')}
+               onDoubleClick={() => loadout.armor && handleRemoveItem('armor')}
+               onClick={(e) => !loadout.armor && handleEmptySlotClick('armor', null, e)}
+             >
+               {loadout.armor ? (
+                <>
+                  <div className="item-icon"><img src={`assets/items/${loadout.armor.icon}.png`} alt={loadout.armor.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.armor.sub||loadout.armor.category}</div></div>
+                  <div className="item-name">{loadout.armor.name}</div>
+                </>
+               ) : (
+                <>
+                  <div className="empty-slot-icon">🛡️</div>
+                  <div className="empty-slot-text">SHIELD</div>
+                </>
+               )}
+             </div>
+            </div>
+
+            <div className="slot-label" style={{marginTop: '12px'}}>WEAPONS</div>
+            <div className="slot-row equipment">
+             <div
+               className={`slot ${loadout.primary ? 'has-item' : ''}`}
+               draggable={!!loadout.primary}
+               onDragStart={() => loadout.primary && handleDragStart(loadout.primary, 'primary')}
+               onDragOver={handleDragOver}
+               onDrop={() => handleDrop('primary')}
+               onDoubleClick={() => loadout.primary && handleRemoveItem('primary')}
+               onClick={(e) => !loadout.primary && handleEmptySlotClick('primary', null, e)}
+             >
+               {loadout.primary ? (
+                <>
+                  <div className="item-icon"><img src={`assets/items/${loadout.primary.icon}.png`} alt={loadout.primary.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.primary.sub||loadout.primary.category}</div></div>
+                  <div className="item-name">{loadout.primary.name}</div>
+                </>
+               ) : (
+                <>
+                  <div className="empty-slot-icon">⚔️</div>
+                  <div className="empty-slot-text">PRIMARY</div>
+                </>
+               )}
+             </div>
+             <div
+               className={`slot ${loadout.secondary ? 'has-item' : ''}`}
+               draggable={!!loadout.secondary}
+               onDragStart={() => loadout.secondary && handleDragStart(loadout.secondary, 'secondary')}
+               onDragOver={handleDragOver}
+               onDrop={() => handleDrop('secondary')}
+               onDoubleClick={() => loadout.secondary && handleRemoveItem('secondary')}
+               onClick={(e) => !loadout.secondary && handleEmptySlotClick('secondary', null, e)}
+             >
+               {loadout.secondary ? (
+                <>
+                  <div className="item-icon"><img src={`assets/items/${loadout.secondary.icon}.png`} alt={loadout.secondary.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.secondary.sub||loadout.secondary.category}</div></div>
+                  <div className="item-name">{loadout.secondary.name}</div>
+                </>
+               ) : (
+                <>
+                  <div className="empty-slot-icon">🔫</div>
+                  <div className="empty-slot-text">SECONDARY</div>
+                </>
+               )}
+             </div>
+            </div>
+
+            <div className="slot-label" style={{marginTop: '12px'}}>BACKPACK {loadout.backpack.filter(i => i !== null).length}/10</div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px'}}>
+             {loadout.backpack.map((item, idx) => (
+               <div
+                key={idx}
+                className={`slot small ${item ? 'has-item' : ''}`}
+                draggable={!!item}
+                onDragStart={() => item && handleDragStart(item, `backpack-${idx}`)}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(`backpack-${idx}`, idx)}
+                onDoubleClick={() => item && handleRemoveItem(`backpack-${idx}`, idx)}
+                onClick={(e) => !item && handleEmptySlotClick('backpack', idx, e)}
+               >
+                {item ? (
+                  <>
+                   <div className="item-icon">
+                     <img
+                       src={`assets/items/${item.icon}.png`}
+                       alt={item.name}
+                       style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}}
+                       onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
+                     />
+                     <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.55rem',fontWeight:700,color:'rgba(255,255,255,0.25)',fontFamily:'Rajdhani',letterSpacing:'1px',textAlign:'center',lineHeight:1.2}}>
+                       {item.sub || item.category}
+                     </div>
+                   </div>
+                   <div className="item-name" style={{fontSize: '0.55rem'}}>{item.name}</div>
+                  </>
+                ) : (
+                  <div className="empty-slot-text">+</div>
+                )}
+               </div>
+             ))}
+            </div>
+
+            <div className="slot-label" style={{marginTop: '12px'}}>QUICK USE {loadout.quickUse.filter(i => i !== null).length}/4</div>
+            <div className="slot-row quick">
+             {loadout.quickUse.map((item, idx) => (
+               <div
+                key={idx}
+                className={`slot small ${item ? 'has-item' : ''}`}
+                draggable={!!item}
+                onDragStart={() => item && handleDragStart(item, `quick-${idx}`)}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(`quick-${idx}`, idx)}
+                onDoubleClick={() => item && handleRemoveItem(`quick-${idx}`, idx)}
+                onClick={(e) => !item && handleEmptySlotClick('quick', idx, e)}
+               >
+                {item ? (
+                  <div className="item-icon">
+                     <img
+                       src={`assets/items/${item.icon}.png`}
+                       alt={item.name}
+                       style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}}
+                       onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
+                     />
+                     <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.55rem',fontWeight:700,color:'rgba(255,255,255,0.25)',fontFamily:'Rajdhani',letterSpacing:'1px',textAlign:'center',lineHeight:1.2}}>
+                       {item.sub || item.category}
+                     </div>
+                   </div>
+                ) : (
+                  <div className="empty-slot-icon" style={{fontSize: '1.5rem'}}>◯</div>
+                )}
+               </div>
+             ))}
+            </div>
+
+            <div className="slot-label" style={{marginTop: '12px'}}>SAFE POCKET {loadout.safePocket ? '1/1' : '0/1'}</div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px'}}>
+             <div
+               className={`slot small ${loadout.safePocket ? 'has-item' : ''}`}
+               draggable={!!loadout.safePocket}
+               onDragStart={() => loadout.safePocket && handleDragStart(loadout.safePocket, 'safePocket')}
+               onDragOver={handleDragOver}
+               onDrop={() => handleDrop('safePocket')}
+               onDoubleClick={() => loadout.safePocket && handleRemoveItem('safePocket')}
+               onClick={(e) => !loadout.safePocket && handleEmptySlotClick('safePocket', null, e)}
+             >
+               {loadout.safePocket ? (
+                <>
+                  <div className="item-icon"><img src={`assets/items/${loadout.safePocket.icon}.png`} alt={loadout.safePocket.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.safePocket.sub||loadout.safePocket.category}</div></div>
+                  <div className="item-name" style={{fontSize: '0.55rem'}}>{loadout.safePocket.name}</div>
+                </>
+               ) : (
+                <>
+                  <div className="empty-slot-icon" style={{fontSize: '1.5rem'}}>🔒</div>
+                  <div className="empty-slot-text">SAFE</div>
+                </>
+               )}
+             </div>
+            </div>
+          </div>
+
+          <div style={{marginTop: '16px'}}>
+            <div className="section-title">
+             STASH
+             <span className="section-count">{filteredInventory.length}/{INVENTORY_DB.length}</span>
+            </div>
+
+            <div className="category-sidebar">
+             {CATEGORIES.map(cat => (
+               <button
+                key={cat.id}
+                className={`category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat.id)}
+               >
+                <span className="icon">{cat.icon}</span>
+                <span>{cat.label}</span>
+               </button>
+             ))}
+            </div>
+
+            <div className="stash-grid">
+             {filteredInventory.map(item => (
+               <div key={item.id} className="stash-item-wrap">
+                <div
+                  className={`stash-item rarity-${item.rarity} ${highlightedItem === item.id ? 'highlighted' : ''}`}
+                  draggable={true}
+                  onDragStart={() => handleDragStart(item, 'stash')}
+                  onClick={() => handleStashItemClick(item)}
+                >
+                  <div className="item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                  <div className="item-name">{item.name}</div>
+                </div>
+                <button className="stash-item-action-btn" onClick={(e) => { e.stopPropagation(); setItemActionSheet(item); }}>⋯</button>
+               </div>
+             ))}
+            </div>
+          </div>
+         </>
+       )}
+
+       {activeTab === 'WORKSHOP' && (
+         <div style={{paddingBottom:'80px',padding:'16px'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+            {WORKSHOP_STATIONS.map(s => (
+              <div key={s.id} style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'2px'}}>{s.name}</div>
+                <div style={{
+                  width:'100%',aspectRatio:'2.8',
+                  background:'rgba(15,22,32,0.85)',
+                  border: activeStation===s.id ? '2px solid #F59E0B' : '2px solid #1f2937',
+                  clipPath:'polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)',
+                  cursor:'pointer',overflow:'hidden',position:'relative'
+                }} onClick={()=>setActiveStation(s.id)}>
+                  <img src={`assets/stations/${s.img}.png`} alt={s.name}
+                    style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}
+                    onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} />
+                  <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'2rem',position:'absolute',inset:0}}>{s.name[0]}</div>
+                  {activeStation===s.id && <div style={{position:'absolute',inset:0,background:'rgba(245,158,11,0.08)'}} />}
+                  <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'6px 10px',background:'linear-gradient(transparent,rgba(6,10,18,0.85))'}}>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color: activeStation===s.id ? '#F59E0B' : '#D1D5DB',letterSpacing:'1px'}}>LVL {s.level}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+         </div>
+       )}
+
+       {activeTab === 'TRADERS' && (
+         <div style={{paddingBottom:'80px',padding:'16px'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+            {TRADERS.map(t => (
+              <div key={t.id} style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'2px'}}>{t.specialism}</div>
+                <div style={{
+                  width:'100%',aspectRatio:'2.2',
+                  background:'rgba(15,22,32,0.85)',
+                  border: activeTrader===t.id ? '2px solid '+t.color : '2px solid #1f2937',
+                  clipPath:'polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)',
+                  cursor:'pointer',overflow:'hidden',position:'relative'
+                }} onClick={()=>setActiveTrader(t.id)}>
+                  <img src={`assets/traders/${t.img}.png`} alt={t.name}
+                    style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}
+                    onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} />
+                  <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'3rem',position:'absolute',inset:0,background:'rgba(15,22,32,0.9)',color:t.color,fontFamily:"'Rajdhani',sans-serif",fontWeight:700}}>{t.name[0]}</div>
+                  {activeTrader===t.id && <div style={{position:'absolute',inset:0,background:'rgba(245,158,11,0.08)'}} />}
+                  <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'8px 12px',background:'linear-gradient(transparent,rgba(6,10,18,0.9))'}}>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'1rem',fontWeight:700,color: activeTrader===t.id ? t.color : '#D1D5DB',letterSpacing:'1px'}}>{t.name}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+         </div>
+       )}
+
+       {activeTab === 'RAIDER' && (
+         <div className="raider-wrap">
+
+          <div className="raider-spacer">
+            <div className="raider-rank-label">
+             <div className="raider-rank-sup">CURRENT RANK</div>
+             <div className="raider-rank-name">HOTSHOT</div>
+            </div>
+          </div>
+
+          <div className="raider-bottom">
+
+            {raiderSection && (() => { const sec = RAIDER_MENU.find(m => m.id === raiderSection);
+              return (
+                <div className="raider-submenu-wrap">
+                  <div className="raider-submenu-inner">
+                    <div className="raider-submenu-title">{sec.label}</div>
+                    {(raiderSection === 'customization' || raiderSection === 'settings' || raiderSection === 'codex') && (
+                      sec.subs.map(([name, desc]) => (
+                        <div key={name} className="raider-menu-row">
+                          <span className="raider-menu-icon">{sec.icon}</span>
+                          <div>
+                            <div className="raider-menu-label">{name}</div>
+                            <div className="raider-menu-desc">{desc}</div>
+                          </div>
+                          <span className="raider-menu-arrow">›</span>
+                        </div>
+                      ))
+                    )}
+                    {raiderSection === 'trials' && (
+                      <div style={{padding:'8px 16px'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'10px'}}>
+                          <div>
+                            <div style={{fontFamily:'Orbitron',fontSize:'0.95rem',fontWeight:700,color:'#F59E0B'}}>HOTSHOT</div>
+                            <div style={{fontFamily:'Rajdhani',fontSize:'0.62rem',color:'#9CA3AF',letterSpacing:'1px'}}>CURRENT RANK · SEASON 3</div>
+                          </div>
+                          <div style={{fontFamily:'Rajdhani',fontSize:'0.62rem',color:'#6B7280',textAlign:'right'}}>
+                            NEXT SEASON<br/><span style={{color:'#F59E0B'}}>2d 13h 44m</span>
+                          </div>
+                        </div>
+                        {[['Complete 1 Feat',10,true],['Complete 3 Feats',30,true],['Complete 5 Feats',40,false]].map(([label,pts,done]) => (
+                          <div key={label} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #111b26'}}>
+                            <span style={{fontFamily:'Rajdhani',fontSize:'0.75rem',color:done?'#10B981':'#9CA3AF'}}>{done?'✓ ':''}{label}</span>
+                            <span style={{fontFamily:'Rajdhani',fontSize:'0.7rem',color:'#F59E0B',fontWeight:700}}>⬡ {pts}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {raiderSection === 'projects' && (
+                      <div style={{padding:'8px 12px'}}>
+                        {[['WEATHER MONITOR',40,2,5],['TROPHY DISPLAY',100,5,5],['EXPEDITION LOG',100,6,6]].map(([name,pct,done,total]) => (
+                          <div key={name} className="project-card">
+                            <div className="project-name">{name}</div>
+                            <div className="project-bar"><div className="project-fill" style={{width:pct+'%',background:pct===100?'#10B981':'#F59E0B'}} /></div>
+                            <div style={{fontFamily:'Rajdhani',fontSize:'0.6rem',color:'#6B7280'}}>{done}/{total} tasks</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ); })()}
+
+            <div className="daily-strip">
+              <div className="daily-strip-label">DAILY LOGIN BONUS</div>
+              <div className="daily-strip-row">
+                {[1,2,3,4,5,6,7].map((day, i) => { const st = day < 3 ? 'claimed' : day === 3 ? 'current' : 'upcoming';
+                  return (
+                    <React.Fragment key={day}>
+                      {i > 0 && <div className={`daily-connector ${day <= 3 ? 'done' : 'pending'}`} style={{background: day <= 3 ? 'rgba(16,185,129,0.4)' : 'rgba(55,65,81,0.35)'}} />}
+                      <div className={`daily-slot ${st === 'current' ? 'clickable' : ''}`}
+                        onClick={() => st === 'current' && setDailyRewardOpen(true)}>
+                        <div className={`daily-icon-box ${st}`}>
+                          {st === 'upcoming'
+                            ? <span style={{fontSize:'0.65rem',color:'#4B5563'}}>?</span>
+                            : <span>🎁</span>}
+                        </div>
+                        <div className="daily-day-num" style={{color: st==='claimed'?'#10B981': st==='current'?'#F59E0B':'#374151'}}>
+                          {st === 'claimed' ? '✓' : st === 'current' ? '●' : `D${day}`}
+                        </div>
+                        <div className="daily-day-status" style={{color: st==='claimed'?'#10B981': st==='current'?'#F59E0B':'#374151'}}>
+                          {st === 'claimed' ? 'DONE' : st === 'current' ? 'NOW' : `DAY ${day}`}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ); })}
+              </div>
+            </div>
+
+            <div className="raider-icon-row">
+              {RAIDER_MENU.map(m => (
+                <button key={m.id} className={`raider-icon-btn ${raiderSection === m.id ? 'active' : ''}`}
+                  onClick={() => setRaiderSection(raiderSection === m.id ? null : m.id)}>
+                  <span>{m.icon}</span>
+                  <span className="raider-icon-label">{m.label.slice(0,6)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+         </div>
+       )}
+
+       {activeTab === 'DECKS' && (
+         <div style={{paddingBottom: '80px'}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px'}}>
+            {DECKS.map(d => (
+             <div key={d.num} style={{ display: 'flex', overflow: 'hidden', border: d.done ? '1.5px solid #10B981' : '1.5px solid #1f2937', background: 'rgba(11,17,22,0.95)', clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)' }}>
+               <div style={{ width: '100px', minHeight: '80px', flexShrink: 0, background: 'linear-gradient(135deg,#0d1828 0%,#0a1220 100%)', borderRight: '1px solid #1f2937', display: 'flex', alignItems: 'flex-end', padding: '6px' }}>
+                <span style={{ fontFamily:'Orbitron', fontSize: '0.48rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px' }}>AR/RD {d.num}</span>
+               </div>
+               <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
+                <div style={{ fontFamily:'Rajdhani', fontSize: '0.9rem', fontWeight: 700, color: '#F59E0B', letterSpacing:'1.5px' }}>{d.name}</div>
+                <div style={{ fontFamily:'Rajdhani', fontSize: '0.62rem', color: '#6B7280', letterSpacing: '1px' }}>{d.subtitle}</div>
+                {d.done
+                  ? <span style={{fontFamily:'Rajdhani', fontSize: '0.62rem', fontWeight: 700, color: '#10B981'}}>COMPLETED</span>
+                  : <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                     <div style={{ flex: 1, height: '3px', background: '#1f2937', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{width: d.pct + '%', height: '100%', background: '#F59E0B', borderRadius: '2px'}} />
+                     </div>
+                     <span style={{fontFamily:'Rajdhani', fontSize: '0.62rem', color: '#F59E0B', fontWeight: 700}}>{d.pct}%</span>
+                   </div> }
+               </div>
+             </div>
+            ))}
+          </div>
+          <div style={{ background: 'rgba(11,17,22,0.9)', border: '1px solid #1f2937', padding: '12px', clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '10px', marginBottom: '6px', borderBottom: '1px solid #1f2937' }}>
+             <span>⏱</span>
+             <span style={{fontFamily:'Orbitron', fontSize: '0.9rem', fontWeight: 700, color: '#F59E0B'}}>15:06:52</span>
+             <span style={{marginLeft: 'auto', fontFamily:'Rajdhani', fontSize: '0.68rem', color: '#6B7280'}}>Rerolls: 3</span>
+            </div>
+            {DECK_CHALLENGES.map((ch, i) => (
+             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < DECK_CHALLENGES.length - 1 ? '1px solid #0c151e' : 'none', gap: '8px' }}>
+               <span style={{ fontFamily:'Rajdhani', fontSize: '0.75rem', color: ch.done ? '#10B981' : '#9CA3AF' }}>{ch.done ? '✓ ' : ''}{ch.label}</span>
+               <span style={{ fontFamily:'Rajdhani', fontSize: '0.72rem', fontWeight: 700, color: '#F59E0B', flexShrink: 0 }}>⬡ {ch.pts}</span>
+             </div>
+            ))}
+          </div>
+         </div>
+       )}
+
+      </div>
+
+      {activeTab === 'INVENTORY' && (
+       <div className="footer">
+         <div className={`weight-display ${parseFloat(calculateWeight()) > 40 ? 'overweight' : ''}`}>
+          LOAD: {calculateWeight()}kg / 40kg
+         </div>
+         <button className="lock-button">LOCK IN LOADOUT</button>
+       </div>
+      )}
+
+      {craftSheet && (
+       <>
+         <div className="sheet-overlay" onClick={() => setCraftSheet(null)} />
+         <div className="sheet" style={{left: appBounds().left, right: appBounds().right}}>
+          <div className="sheet-handle" />
+          <div><span className="sheet-tag">{craftSheet.tag}</span><span className={`sheet-tag ${craftSheet.rarity}`}>{craftSheet.rarity}-TIER</span></div>
+          <div className="sheet-title">{craftSheet.name}</div>
+          <div className="sheet-desc">{craftSheet.desc}</div>
+          {craftSheet.resources.length > 0 && (
+            <div>
+             <div className="sheet-res-label">REQUIRED RESOURCES</div>
+             {craftSheet.resources.map((r, i) => (
+               <div key={i} className="sheet-res-row">
+                <span className="sheet-res-name">{r.name}</span>
+                <span className={`sheet-res-count ${r.have >= r.need ? 'ok' : 'no'}`}>{r.have}/{r.need}</span>
+               </div>
+             ))}
+             {!hasAllRes(craftSheet.resources) && <div className="sheet-warn">NOT ENOUGH RESOURCES</div>}
+            </div>
+          )}
+          <button className="sheet-btn sheet-btn-primary" disabled={!hasAllRes(craftSheet.resources)} onClick={() => setCraftSheet(null)}>⚒ CRAFT</button>
+          <button className="sheet-btn sheet-btn-secondary" onClick={() => setCraftSheet(null)}>TRACK RESOURCES</button>
+         </div>
+       </>
+      )}
+
+      {traderSheet && (
+       <>
+         <div className="sheet-overlay" onClick={() => setTraderSheet(null)} />
+         <div className="sheet" style={{left: appBounds().left, right: appBounds().right}}>
+          <div className="sheet-handle" />
+          <div><span className="sheet-tag">{traderSheet.item.tag}</span><span className={`sheet-tag ${traderSheet.item.rarity}`}>{traderSheet.item.rarity}-TIER</span></div>
+          <div className="sheet-title">{traderSheet.item.name}</div>
+          <div className="sheet-desc">{traderSheet.item.desc}</div>
+          {traderSheet.item.stats && (
+            <div className="sheet-stats">
+             {Object.entries(traderSheet.item.stats).map(([k, v]) => (
+               <div key={k}>
+                <div className="sheet-stat-label">{k}</div>
+                <div className="sheet-stat-bar"><div className="sheet-stat-fill" style={{ width: `${v}%` }} /></div>
+               </div>
+             ))}
+            </div>
+          )}
+          <div className="sheet-price-row">
+            <span className="sheet-price-label">PRICE</span>
+            <span className="sheet-price-val">⬡ {traderSheet.item.price.toLocaleString()}</span>
+          </div>
+          <button className="sheet-btn sheet-btn-primary" onClick={() => setTraderSheet(null)}>PURCHASE</button>
+         </div>
+       </>
+      )}
+
+      {itemActionSheet && (
+       <>
+         <div className="sheet-overlay" onClick={() => setItemActionSheet(null)} />
+         <div className="sheet" style={{left: appBounds().left, right: appBounds().right}}>
+          <div className="sheet-handle" />
+          <div><span className="sheet-tag">{itemActionSheet.category}</span><span className={`sheet-tag ${itemActionSheet.rarity}`}>{itemActionSheet.rarity}-TIER</span></div>
+          <div className="sheet-title">{itemActionSheet.name}</div>
+          <div style={{ fontFamily:'Rajdhani', fontSize: '0.75rem', color: '#6B7280', letterSpacing: '1px' }}>{itemActionSheet.weight}kg</div>
+          <div className="sheet-action-btns">
+            <button className="sheet-action-btn" onClick={() => setItemActionSheet(null)}>♻ RECYCLE</button>
+            <button className="sheet-action-btn" onClick={() => setItemActionSheet(null)}>⬡ SELL</button>
+            <button className="sheet-action-btn" onClick={() => setItemActionSheet(null)}>◎ TRACK</button>
+          </div>
+         </div>
+       </>
+      )}
+
+      {dropdown && (
+       <div className="dropdown-overlay" style={{top: dropdown.top, left: dropdown.left, right: dropdown.right}}
+         onClick={(e) => e.stopPropagation()}>
+         {!dropdown.category ? (
+          <>
+            <div className="dropdown-header">
+             <span className="dropdown-title">SELECT CATEGORY</span>
+             <button className="dropdown-close-btn" onClick={() => setDropdown(null)}>×</button>
+            </div>
+            <div className="dropdown-cat-list">
+             {CATEGORIES.filter(c => c.id !== 'ALL').map(cat => (
+               <button key={cat.id} className="dropdown-cat-btn"
+                onClick={() => setDropdown(d => ({ ...d, category: cat.id }))}>
+                <span className="dropdown-cat-btn-icon">{cat.icon}</span>
+                {cat.label}
+                <span className="dropdown-cat-btn-arrow">›</span>
+               </button>
+             ))}
+            </div>
+          </>
+         ) : (
+          <>
+            <div className="dropdown-header">
+             <button className="dropdown-back-btn" onClick={() => setDropdown(d => ({ ...d, category: null }))}>‹ BACK</button>
+             <span className="dropdown-title">{dropdown.category}</span>
+             <button className="dropdown-close-btn" onClick={() => setDropdown(null)}>×</button>
+            </div>
+            <div className="dropdown-items-grid">
+             {getDropdownItems().length === 0
+               ? <div className="dropdown-empty">NO ITEMS</div>
+               : getDropdownItems().map(item => (
+                  <div key={item.id} className={`dropdown-item-card rarity-${item.rarity}`}
+                   onClick={() => handleDropdownItemSelect(item)}>
+                   <div className="dropdown-item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.4rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                   <div className="dropdown-item-name">{item.name}</div>
+                  </div>
+                )) }
+            </div>
+          </>
+         )}
+       </div>
+      )}
+
+      {dailyRewardOpen && (
+        <div className="daily-modal-overlay" onClick={() => setDailyRewardOpen(false)}>
+          <div className="daily-modal" onClick={e => e.stopPropagation()}>
+            <div className="daily-modal-header">
+              <div className="daily-modal-title">DAY 3 REWARD</div>
+              <button className="daily-modal-close" onClick={() => setDailyRewardOpen(false)}>✕</button>
+            </div>
+            <div className="daily-modal-body">
+              <video autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'contain',padding:'6px'}}
+                onEnded={() => setDailyRewardOpen(false)}>
+                <source src="assets/daily-reward.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <div className="daily-modal-footer">
+              <div className="daily-modal-sub">DAY 3 OF 7 · LOGIN STREAK</div>
+              <button className="sheet-btn sheet-btn-primary" onClick={() => setDailyRewardOpen(false)}>✦ CLAIM REWARD</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+    </div>
+  );
+};
+
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
