@@ -131,7 +131,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   {id:62,name:'Light Shield',category:'SHIELDS',sub:'Shield',rarity:'C',weight:4,qty:1,icon:'light_shield'},
   {id:63,name:'Medium Shield',category:'SHIELDS',sub:'Shield',rarity:'B',weight:7,qty:1,icon:'medium_shield'},
   {id:64,name:'Heavy Shield',category:'SHIELDS',sub:'Shield',rarity:'A',weight:9,qty:1,icon:'heavy_shield'},
-  {id:65,name:'Free Loadout Augment',category:'SHIELDS',sub:'Free Kit',rarity:'D',weight:0,qty:1,icon:'free_loadout_augment'},
+  {id:65,name:'Free Loadout Augment',category:'AUGMENTS',sub:'Augment',rarity:'D',weight:0,qty:1,icon:'free_loadout_augment'},
   {id:66,name:'Looting Mk. 1',category:'AUGMENTS',sub:'Augment',rarity:'C',weight:1,qty:1,icon:'looting_mk1'},
   {id:67,name:'Looting Mk. 2',category:'AUGMENTS',sub:'Augment',rarity:'B',weight:1,qty:1,icon:'looting_mk2'},
   {id:68,name:'Looting Mk. 3 (Cautious)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'looting_mk3_cautious'},
@@ -919,12 +919,12 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 .slot.valid-drop-target { border-color: #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); animation: dropPulse 1s ease infinite; }
       @keyframes dropPulse { 0%, 100% { border-color: #10B981; }
       50% { border-color: #34D399; } }
-      .empty-slot-text { font-family: 'Rajdhani', sans-serif;
+      .empty-slot-text { display: none; } .empty-slot-text-hidden { font-family: 'Rajdhani', sans-serif;
       font-size: 0.7rem;
       font-weight: 600;
       color: #4B5563;
       letter-spacing: 1px; }
-.empty-slot-icon { font-size: 1.8rem; color: #374151; margin-bottom: 4px; }
+.empty-slot-icon { font-size: 1.2rem; color: #374151; margin-bottom: 2px; font-weight: 300; }
       .footer { position: sticky;
       bottom: 0;
       background: rgba(15, 20, 25, 0.98);
@@ -1406,7 +1406,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 </>
                ) : (
                 <>
-                  <div className="empty-slot-icon">⚡</div>
+                  <div className="empty-slot-icon">+</div>
                   <div className="empty-slot-text">AUGMENT</div>
                 </>
                )}
@@ -1427,7 +1427,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 </>
                ) : (
                 <>
-                  <div className="empty-slot-icon">🛡️</div>
+                  <div className="empty-slot-icon">+</div>
                   <div className="empty-slot-text">SHIELD</div>
                 </>
                )}
@@ -1452,7 +1452,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 </>
                ) : (
                 <>
-                  <div className="empty-slot-icon">⚔️</div>
+                  <div className="empty-slot-icon">+</div>
                   <div className="empty-slot-text">PRIMARY</div>
                 </>
                )}
@@ -1473,7 +1473,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 </>
                ) : (
                 <>
-                  <div className="empty-slot-icon">🔫</div>
+                  <div className="empty-slot-icon">+</div>
                   <div className="empty-slot-text">SECONDARY</div>
                 </>
                )}
@@ -1541,7 +1541,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                      </div>
                    </div>
                 ) : (
-                  <div className="empty-slot-icon" style={{fontSize: '1.5rem'}}>◯</div>
+                  <div className="empty-slot-icon">+</div>
                 )}
                </div>
              ))}
@@ -1565,7 +1565,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 </>
                ) : (
                 <>
-                  <div className="empty-slot-icon" style={{fontSize: '1.5rem'}}>🔒</div>
+                  <div className="empty-slot-icon">+</div>
                   <div className="empty-slot-text">SAFE</div>
                 </>
                )}
@@ -1617,7 +1617,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
           <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
             {WORKSHOP_STATIONS.map(s => (
               <div key={s.id} style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'2px'}}>{s.name}</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'2px'}}>{s.name}</div>
                 <div style={{
                   width:'100%',aspectRatio:'2.8',
                   background:'rgba(15,22,32,0.85)',
@@ -1645,7 +1645,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
           <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
             {TRADERS.map(t => (
               <div key={t.id} style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'2px'}}>{t.specialism}</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'2px'}}>{t.specialism}</div>
                 <div style={{
                   width:'100%',aspectRatio:'2.2',
                   background:'rgba(15,22,32,0.85)',
