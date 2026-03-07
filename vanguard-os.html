@@ -12,7 +12,8 @@
   #side-right{left:calc(50% + 240px);right:0}
   #root{position:relative;z-index:2}
   * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-</style></head><body oncontextmenu="return false">
+</style></head>
+<body oncontextmenu="return false">
 <div id="video-bg"><video autoplay loop muted playsinline><source src="assets/raider-idle.mp4" type="video/mp4"></video></div>
 <div id="side-left"></div><div id="side-right"></div>
 <audio id="menu-music" loop><source src="assets/menu-music.mp3" type="audio/mpeg"></audio>
@@ -493,6 +494,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [clExpanded, setClExpanded] = useState(null);
   const [clTracked, setClTracked] = useState([]);
   const [clModal, setClModal] = useState(null);
+  const [syncModal, setSyncModal] = useState(false);
 
 
   const [loadout, setLoadout] = useState({ augment: null,
@@ -1520,6 +1522,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .cl-modal-cancel { background:rgba(30,41,59,0.8); color:#9CA3AF; border:1px solid #374151; }
       .cl-modal-details { background:rgba(30,41,59,0.6); color:#6B7280; border:1px solid #374151; font-size:0.72rem; }
       .cl-modal-confirm { background:#10B981; color:#000; border:none; }
+      @keyframes syncFadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
 `}</style>
 
     <div className="container" onClick={() => dropdown && setDropdown(null)}>
@@ -2048,7 +2051,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
          <div className={`weight-display ${parseFloat(calculateWeight()) > 40 ? 'overweight' : ''}`}>
           LOAD: {calculateWeight()}kg / 40kg
          </div>
-         <button className="lock-button">LOCK IN LOADOUT</button>
+         <button className="lock-button" onClick={function(){ playCraftSound(); setSyncModal(true); setTimeout(function(){ setSyncModal(false); }, 3500); }}>LOCK IN LOADOUT</button>
        </div>
       )}
 
@@ -2212,6 +2215,16 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         </div>
       )}
     </div>
+
+      {syncModal && (
+        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+          <div style={{background:'#0d1620',border:'1px solid rgba(245,158,11,0.4)',borderRadius:'12px',padding:'24px 32px',textAlign:'center',boxShadow:'0 0 40px rgba(245,158,11,0.15)',animation:'syncFadeIn 0.25s ease'}}>
+            <div style={{fontSize:'1.4rem',marginBottom:'6px'}}>✓</div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.85rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'6px'}}>LOADOUT SYNCED</div>
+            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',color:'#6B7280',letterSpacing:'1px'}}>Profile updated · Active on next login</div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
