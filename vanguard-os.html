@@ -1,9 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VANGUARD OS</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>VANGUARD OS</title>
 <style>
   html,body{margin:0;padding:0;background:#060c12;min-height:100vh;overflow-x:hidden}
   #video-bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;display:flex;justify-content:center;overflow:hidden;background:#060c12}
@@ -13,19 +9,13 @@
   #side-left{left:0;right:calc(50% + 240px)}
   #side-right{left:calc(50% + 240px);right:0}
   #root{position:relative;z-index:2}
-</style>
-</head>
-<body>
+</style></head><body>
 <div id="video-bg"><video autoplay loop muted playsinline><source src="assets/raider-idle.mp4" type="video/mp4"></video></div>
 <div id="side-left"></div><div id="side-right"></div>
-<audio id="menu-music" loop>
-  <source src="assets/menu-music.mp3" type="audio/mpeg">
-  <source src="assets/menu-music.ogg" type="audio/ogg">
-</audio>
+<audio id="menu-music" loop><source src="assets/menu-music.mp3" type="audio/mpeg"></audio>
 <div id="root"></div>
 <script>
-const music=document.getElementById('menu-music');
-music.volume=0.35;
+const music=document.getElementById('menu-music');music.volume=0.35;
 function startMusic(){music.play().catch(()=>{});document.removeEventListener('click',startMusic);document.removeEventListener('keydown',startMusic);}
 music.play().catch(()=>{document.addEventListener('click',startMusic);document.addEventListener('keydown',startMusic);});
 </script>
@@ -637,6 +627,19 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     const r = el.getBoundingClientRect();
     return { left: r.left, right: window.innerWidth - r.right }; };
 
+  const CATEGORY_ICONS = {
+    WEAPONS:     <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><rect x="0.5" y="2" width="6.5" height="2.5" rx="0.4" stroke="currentColor" strokeWidth="0.8"/><rect x="7" y="2.4" width="2" height="1.6" rx="0.3" stroke="currentColor" strokeWidth="0.7"/><rect x="2" y="4.5" width="2.5" height="2" rx="0.3" stroke="currentColor" strokeWidth="0.7"/></svg>,
+    SHIELDS:     <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M4.5 1L8 2.5V5.5C8 7.5 4.5 9.2 4.5 9.2C4.5 9.2 1 7.5 1 5.5V2.5L4.5 1Z" stroke="currentColor" strokeWidth="0.85" fill="none"/></svg>,
+    AUGMENTS:    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" strokeWidth="0.8"/><circle cx="4.5" cy="4.5" r="1.2" stroke="currentColor" strokeWidth="0.7"/></svg>,
+    MODS:        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="2" stroke="currentColor" strokeWidth="0.8"/><path d="M4.5 1v1.2M4.5 6.8V8M1 4.5h1.2M6.8 4.5H8" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round"/></svg>,
+    CONSUMABLES: <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="3.5" width="7" height="1" rx="0.4" fill="currentColor"/><rect x="3.5" y="1" width="1" height="7" rx="0.4" fill="currentColor"/></svg>,
+    MATERIALS:   <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1L8 3.5V5.5L4.5 8L1 5.5V3.5L4.5 1Z" stroke="currentColor" strokeWidth="0.8" fill="none"/></svg>,
+    KEYS:        <svg width="10" height="9" viewBox="0 0 10 9" fill="none"><circle cx="3" cy="4" r="2.2" stroke="currentColor" strokeWidth="0.8"/><path d="M5 4h4M7.5 4v1.2" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round"/></svg>,
+    BLUEPRINTS:  <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="0.5" stroke="currentColor" strokeWidth="0.8"/><path d="M2.5 4.5h4M4.5 2.5v4" stroke="currentColor" strokeWidth="0.7" strokeLinecap="round"/></svg>,
+    NATURE:      <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 8V4.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round"/><path d="M4.5 4.5C4.5 4.5 1.5 4 1.5 1.5C1.5 1.5 4 1.5 4.5 4.5Z" stroke="currentColor" strokeWidth="0.75" fill="none"/><path d="M4.5 4.5C4.5 4.5 7.5 4 7.5 1.5C7.5 1.5 5 1.5 4.5 4.5Z" stroke="currentColor" strokeWidth="0.75" fill="none"/></svg>,
+    TRINKETS:    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5l.9 1.8 2 .3-1.45 1.4.34 2L4.5 6.1 2.71 7l.34-2L1.6 3.6l2-.3z" stroke="currentColor" strokeWidth="0.75" fill="none"/></svg>,
+  };
+
   const DECKS = [
   { num: '001', name: 'STARTER DECK', subtitle: 'RYDER & VOYAGER', pct: 100, done: true },
   { num: '002', name: 'GOALIE DECK', subtitle: 'GOALIE', pct: 100, done: true },
@@ -845,8 +848,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       border: 1px solid #374151;
       border-radius: 4px; }
       .stash-item { aspect-ratio: 1; position: relative;
-      background: rgba(8, 11, 16, 0.92);
-      border: 1px solid;
+      background: rgba(6,9,14,0.35);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -854,19 +856,19 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       padding: 0;
       cursor: grab;
       transition: all 0.2s ease;
-      border-radius: 5px;
+      border-radius: 5.5%;
       overflow: hidden; }
 .stash-item:hover { filter: brightness(1.15); }
       .stash-item:active { cursor: grabbing; transform: scale(0.95); }
-      .stash-item::after { content: ''; position: absolute; inset: 0; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); pointer-events: none; }
+
 .stash-item.highlighted { animation: pulse 0.3s ease; }
       @keyframes pulse { 0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); } }
-      .stash-item.rarity-S { border-color: #252d38; box-shadow: none; border-bottom: 2px solid #EC4899; border-left: 2px solid rgba(236,72,153,0.5); }
-      .stash-item.rarity-A { border-color: #252d38; box-shadow: none; border-bottom: 2px solid #F59E0B; border-left: 2px solid rgba(245,158,11,0.5); }
-      .stash-item.rarity-B { border-color: #252d38; box-shadow: none; border-bottom: 2px solid #06B6D4; border-left: 2px solid rgba(6,182,212,0.4); }
-      .stash-item.rarity-C { border-color: #252d38; border-bottom: 1px solid #4B5563; }
-      .stash-item.rarity-D { border-color: #1a2030; }
+      .stash-item.rarity-S { }
+      .stash-item.rarity-A { }
+      .stash-item.rarity-B { }
+      .item-cat-icon { display: none; }
+      .item-qty-badge { position: absolute; bottom: 3px; right: 3px; z-index: 2; font-family: 'Rajdhani', sans-serif; font-size: 0.48rem; font-weight: 700; color: rgba(255,255,255,0.55); letter-spacing: 0.3px; pointer-events: none; line-height: 1; }
       .item-icon { position: absolute;
       inset: 0;
       display: flex;
@@ -889,8 +891,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       color: #6B7280;
       letter-spacing: 3px;
       margin-bottom: 5px; }
-      .slot { background: rgba(8, 11, 16, 0.88);
-      border: 1px solid #252d38;
+      .slot { background: rgba(6,9,14,0.35); border: 1px solid rgba(255,255,255,0.07);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -898,18 +899,21 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       padding: 0;
       cursor: pointer;
       transition: all 0.2s ease;
-      border-radius: 5px;
+      border-radius: 5.5%;
       overflow: hidden;
       position: relative;
       aspect-ratio: 1; }
 .slot.small { padding: 8px; aspect-ratio: 1; }
-.slot.has-item { border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.04); cursor: grab; }
+.slot.has-item { background: #000; cursor: grab; }
+.slot.rarity-S { }
+.slot.rarity-A { }
+.slot.rarity-B { }
 .slot.has-item:active { cursor: grabbing; }
 .slot:active { transform: scale(0.98); }
-.slot.dragging-source { opacity: 0.5; border-style: dashed; }
-.slot.valid-drop-target { border-color: #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); animation: dropPulse 1s ease infinite; }
-      @keyframes dropPulse { 0%, 100% { border-color: #10B981; }
-      50% { border-color: #34D399; } }
+.slot.dragging-source { opacity: 0.5; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+.slot.valid-drop-target { box-shadow: inset 0 0 0 1.5px #10B981, 0 0 12px rgba(16,185,129,0.4); animation: dropPulse 1s ease infinite; }
+      @keyframes dropPulse { 0%, 100% { box-shadow: inset 0 0 0 1.5px #10B981, 0 0 12px rgba(16,185,129,0.4); }
+      50% { box-shadow: inset 0 0 0 1.5px #34D399, 0 0 18px rgba(52,211,153,0.5); } }
       .empty-slot-text { display: none; } .empty-slot-text-hidden { font-family: 'Rajdhani', sans-serif;
       font-size: 0.7rem;
       font-weight: 600;
@@ -1240,18 +1244,17 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       background: rgba(5,9,15,0.95);
       border-top: 1px solid rgba(245,158,11,0.2);
       padding: 10px 8px 16px; }
-      .raider-icon-btn { width: 56px; height: 56px;
-      border-radius: 6px;
-      border: 1px solid rgba(55,65,81,0.6);
-      background: rgba(10,14,20,0.85);
-      display: flex; flex-direction: column;
+      .raider-icon-btn { width: 54px; height: 54px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(55,65,81,0.7);
+      background: rgba(12,18,28,0.92);
+      display: flex;
       align-items: center; justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1.5rem;
       cursor: pointer; transition: all 0.15s; }
-.raider-icon-btn.active { border-color: #F59E0B; background: rgba(245,158,11,0.1); box-shadow: 0 0 16px rgba(245,158,11,0.2); }
+.raider-icon-btn.active { border-color: rgba(245,158,11,0.8); background: rgba(20,28,42,0.95); box-shadow: 0 0 18px rgba(245,158,11,0.15); }
       .raider-icon-btn:active { transform: scale(0.91); }
-.raider-icon-label { font-family: 'Rajdhani', sans-serif; font-size: 0.45rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.5px; margin-top: 3px; }
-      .raider-icon-btn.active .raider-icon-label { color: #F59E0B; }
+.raider-icon-label { display: none; }
 .daily-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 900; display: flex; align-items: center; justify-content: center; }
       .daily-modal { position: relative;
       width: calc(100% - 32px);
@@ -1390,7 +1393,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             <div className="slot-label">AUGMENT & SHIELD</div>
             <div className="slot-row equipment">
              <div
-               className={`slot ${loadout.augment ? 'has-item' : ''}`}
+               className={`slot ${loadout.augment ? 'has-item rarity-'+loadout.augment.rarity : ''}`}
                draggable={!!loadout.augment}
                onDragStart={() => loadout.augment && handleDragStart(loadout.augment, 'augment')}
                onDragOver={handleDragOver}
@@ -1400,7 +1403,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              >
                {loadout.augment ? (
                 <>
-                  <div className="item-icon"><img src={`assets/items/${loadout.augment.icon}.png`} alt={loadout.augment.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.augment.sub||loadout.augment.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${loadout.augment.icon}.png`} alt={loadout.augment.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.augment.sub||loadout.augment.category}</div></div>
                   <div className="item-name">{loadout.augment.name}</div>
                 </>
                ) : (
@@ -1410,7 +1413,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                )}
              </div>
              <div
-               className={`slot ${loadout.armor ? 'has-item' : ''}`}
+               className={`slot ${loadout.armor ? 'has-item rarity-'+loadout.armor.rarity : ''}`}
                draggable={!!loadout.armor}
                onDragStart={() => loadout.armor && handleDragStart(loadout.armor, 'armor')}
                onDragOver={handleDragOver}
@@ -1420,7 +1423,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              >
                {loadout.armor ? (
                 <>
-                  <div className="item-icon"><img src={`assets/items/${loadout.armor.icon}.png`} alt={loadout.armor.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.armor.sub||loadout.armor.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${loadout.armor.icon}.png`} alt={loadout.armor.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.armor.sub||loadout.armor.category}</div></div>
                   <div className="item-name">{loadout.armor.name}</div>
                 </>
                ) : (
@@ -1434,7 +1437,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             <div className="slot-label" style={{marginTop: '12px'}}>WEAPONS</div>
             <div className="slot-row equipment">
              <div
-               className={`slot ${loadout.primary ? 'has-item' : ''}`}
+               className={`slot ${loadout.primary ? 'has-item rarity-'+loadout.primary.rarity : ''}`}
                draggable={!!loadout.primary}
                onDragStart={() => loadout.primary && handleDragStart(loadout.primary, 'primary')}
                onDragOver={handleDragOver}
@@ -1444,7 +1447,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              >
                {loadout.primary ? (
                 <>
-                  <div className="item-icon"><img src={`assets/items/${loadout.primary.icon}.png`} alt={loadout.primary.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.primary.sub||loadout.primary.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${loadout.primary.icon}.png`} alt={loadout.primary.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.primary.sub||loadout.primary.category}</div></div>
                   <div className="item-name">{loadout.primary.name}</div>
                 </>
                ) : (
@@ -1454,7 +1457,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                )}
              </div>
              <div
-               className={`slot ${loadout.secondary ? 'has-item' : ''}`}
+               className={`slot ${loadout.secondary ? 'has-item rarity-'+loadout.secondary.rarity : ''}`}
                draggable={!!loadout.secondary}
                onDragStart={() => loadout.secondary && handleDragStart(loadout.secondary, 'secondary')}
                onDragOver={handleDragOver}
@@ -1464,7 +1467,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              >
                {loadout.secondary ? (
                 <>
-                  <div className="item-icon"><img src={`assets/items/${loadout.secondary.icon}.png`} alt={loadout.secondary.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.secondary.sub||loadout.secondary.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${loadout.secondary.icon}.png`} alt={loadout.secondary.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.secondary.sub||loadout.secondary.category}</div></div>
                   <div className="item-name">{loadout.secondary.name}</div>
                 </>
                ) : (
@@ -1480,7 +1483,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              {loadout.backpack.map((item, idx) => (
                <div
                 key={idx}
-                className={`slot small ${item ? 'has-item' : ''}`}
+                className={`slot small ${item ? 'has-item rarity-'+item.rarity : ''}`}
                 draggable={!!item}
                 onDragStart={() => item && handleDragStart(item, `backpack-${idx}`)}
                 onDragOver={handleDragOver}
@@ -1494,7 +1497,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                      <img
                        src={`assets/items/${item.icon}.png`}
                        alt={item.name}
-                       style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}}
+                       style={{width:'100%',height:'100%',objectFit:'cover'}}
                        onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
                      />
                      <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.55rem',fontWeight:700,color:'rgba(255,255,255,0.25)',fontFamily:'Rajdhani',letterSpacing:'1px',textAlign:'center',lineHeight:1.2}}>
@@ -1515,7 +1518,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              {loadout.quickUse.map((item, idx) => (
                <div
                 key={idx}
-                className={`slot small ${item ? 'has-item' : ''}`}
+                className={`slot small ${item ? 'has-item rarity-'+item.rarity : ''}`}
                 draggable={!!item}
                 onDragStart={() => item && handleDragStart(item, `quick-${idx}`)}
                 onDragOver={handleDragOver}
@@ -1528,7 +1531,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                      <img
                        src={`assets/items/${item.icon}.png`}
                        alt={item.name}
-                       style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}}
+                       style={{width:'100%',height:'100%',objectFit:'cover'}}
                        onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
                      />
                      <div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.55rem',fontWeight:700,color:'rgba(255,255,255,0.25)',fontFamily:'Rajdhani',letterSpacing:'1px',textAlign:'center',lineHeight:1.2}}>
@@ -1545,7 +1548,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             <div className="slot-label" style={{marginTop: '12px'}}>SAFE POCKET {loadout.safePocket ? '1/1' : '0/1'}</div>
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px'}}>
              <div
-               className={`slot small ${loadout.safePocket ? 'has-item' : ''}`}
+               className={`slot small ${loadout.safePocket ? 'has-item rarity-'+loadout.safePocket.rarity : ''}`}
                draggable={!!loadout.safePocket}
                onDragStart={() => loadout.safePocket && handleDragStart(loadout.safePocket, 'safePocket')}
                onDragOver={handleDragOver}
@@ -1555,7 +1558,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              >
                {loadout.safePocket ? (
                 <>
-                  <div className="item-icon"><img src={`assets/items/${loadout.safePocket.icon}.png`} alt={loadout.safePocket.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.safePocket.sub||loadout.safePocket.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${loadout.safePocket.icon}.png`} alt={loadout.safePocket.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.safePocket.sub||loadout.safePocket.category}</div></div>
                   <div className="item-name" style={{fontSize: '0.55rem'}}>{loadout.safePocket.name}</div>
                 </>
                ) : (
@@ -1595,8 +1598,10 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                   onDragStart={() => handleDragStart(item, 'stash')}
                   onClick={() => handleStashItemClick(item)}
                 >
-                  <div className="item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                  <div className="item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
                   <div className="item-name">{item.name}</div>
+                  {CATEGORY_ICONS[item.category] && <div className="item-cat-icon">{CATEGORY_ICONS[item.category]}</div>}
+                  {item.qty > 1 && <div className="item-qty-badge">+{item.qty}</div>}
                 </div>
                 <button className="stash-item-action-btn" onClick={(e) => { e.stopPropagation(); setItemActionSheet(item); }}>⋯</button>
                </div>
@@ -1922,7 +1927,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                : getDropdownItems().map(item => (
                   <div key={item.id} className={`dropdown-item-card rarity-${item.rarity}`}
                    onClick={() => handleDropdownItemSelect(item)}>
-                   <div className="dropdown-item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.4rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                   <div className="dropdown-item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.4rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
                    <div className="dropdown-item-name">{item.name}</div>
                   </div>
                 )) }
@@ -1940,7 +1945,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
               <button className="daily-modal-close" onClick={() => setDailyRewardOpen(false)}>✕</button>
             </div>
             <div className="daily-modal-body">
-              <video autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'contain',padding:'3px'}}
+              <video autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}
                 onEnded={() => setDailyRewardOpen(false)}>
                 <source src="assets/daily-reward.mp4" type="video/mp4" />
               </video>
@@ -1961,6 +1966,4 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
-</script>
-</body>
-</html>
+</script></body></html>
