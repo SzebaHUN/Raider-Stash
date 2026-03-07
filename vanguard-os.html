@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>VANGUARD OS</title>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VANGUARD OS</title>
 <style>
   html,body{margin:0;padding:0;background:#060c12;min-height:100vh;overflow-x:hidden}
   #video-bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;display:flex;justify-content:center;overflow:hidden;background:#060c12}
@@ -9,54 +11,13 @@
   #side-left{left:0;right:calc(50% + 240px)}
   #side-right{left:calc(50% + 240px);right:0}
   #root{position:relative;z-index:2}
-</style></head><body>
+  * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+</style></head><body oncontextmenu="return false">
 <div id="video-bg"><video autoplay loop muted playsinline><source src="assets/raider-idle.mp4" type="video/mp4"></video></div>
 <div id="side-left"></div><div id="side-right"></div>
 <audio id="menu-music" loop><source src="assets/menu-music.mp3" type="audio/mpeg"></audio>
 <div id="root"></div>
-<script>
-const music=document.getElementById('menu-music');music.volume=0.35;
-function startMusic(){music.play().catch(()=>{});document.removeEventListener('click',startMusic);document.removeEventListener('keydown',startMusic);}
-music.play().catch(()=>{document.addEventListener('click',startMusic);document.addEventListener('keydown',startMusic);});
-</script>
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script type="text/babel">
-const {useState,useRef,useEffect} = React;
-
-const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [highlightedItem, setHighlightedItem] = useState(null);
-  const [draggedItem, setDraggedItem] = useState(null);
-  const [dragSource, setDragSource] = useState(null);
-
-  const [dropdown, setDropdown] = useState(null);
-  const mainContentRef = useRef(null);
-  useEffect(() => { const el = mainContentRef.current;
-    if (!el) return;
-    const hide = () => setDropdown(null);
-    el.addEventListener('scroll', hide, { passive: true });
-    return () => el.removeEventListener('scroll', hide); }, []);
-
-  const [activeStation, setActiveStation] = useState('gunsmith');
-  const [craftSheet, setCraftSheet] = useState(null);
-  const [activeTrader, setActiveTrader] = useState('celeste');
-  const [traderSubTab, setTraderSubTab] = useState('TRADES');
-  const [traderSheet, setTraderSheet] = useState(null);
-  const [raiderSection, setRaiderSection] = useState(null);
-  const [dailyRewardOpen, setDailyRewardOpen] = useState(false);
-  const [itemActionSheet, setItemActionSheet] = useState(null);
-
-  const [loadout, setLoadout] = useState({ augment: null,
-    armor: null,
-    primary: null,
-    secondary: null,
-    backpack: Array(10).fill(null),
-    quickUse: Array(4).fill(null),
-    safePocket: null });
-
-  const INVENTORY_DB = [
+<script>window.INVENTORY_DB = [
   {id:1,name:'Arpeggio I',category:'WEAPONS',sub:'Assault Rifle',rarity:'D',weight:6,qty:1,icon:'arpeggio_i'},
   {id:2,name:'Arpeggio II',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:6,qty:1,icon:'arpeggio_ii'},
   {id:3,name:'Arpeggio III',category:'WEAPONS',sub:'Assault Rifle',rarity:'B',weight:6,qty:1,icon:'arpeggio_iii'},
@@ -493,7 +454,118 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   {id:434,name:'Unusable Weapon',category:'TRINKETS',sub:'Recyclable',rarity:'D',weight:1,qty:3,icon:'unusable_weapon'},
   {id:435,name:'Vase',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'vase'},
   {id:436,name:'Very Comfortable Pillow',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'very_comfortable_pillow'}
-];;;
+];</script>
+<script>
+const music=document.getElementById('menu-music');music.volume=0.35;
+function startMusic(){music.play().catch(()=>{});document.removeEventListener('click',startMusic);document.removeEventListener('keydown',startMusic);}
+music.play().catch(()=>{document.addEventListener('click',startMusic);document.addEventListener('keydown',startMusic);});
+</script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script id="app-src" type="text/babel-src">
+const {useState,useRef,useEffect} = React;
+const INVENTORY_DB = window.INVENTORY_DB;
+
+const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [highlightedItem, setHighlightedItem] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragSource, setDragSource] = useState(null);
+
+  const [dropdown, setDropdown] = useState(null);
+  const mainContentRef = useRef(null);
+  useEffect(() => { const el = mainContentRef.current;
+    if (!el) return;
+    const hide = () => setDropdown(null);
+    el.addEventListener('scroll', hide, { passive: true });
+    return () => el.removeEventListener('scroll', hide); }, []);
+
+  const [activeStation, setActiveStation] = useState('gunsmith');
+  const [craftSheet, setCraftSheet] = useState(null);
+  const [activeTrader, setActiveTrader] = useState('celeste');
+  const [traderSubTab, setTraderSubTab] = useState('TRADES');
+  const [traderSheet, setTraderSheet] = useState(null);
+  const [raiderSection, setRaiderSection] = useState(null);
+  const [dailyRewardOpen, setDailyRewardOpen] = useState(false);
+  const [itemActionSheet, setItemActionSheet] = useState(null);
+  const [clOpen, setClOpen] = useState(false);
+  const [clExpanded, setClExpanded] = useState(null);
+  const [clTracked, setClTracked] = useState([]);
+  const [clModal, setClModal] = useState(null);
+
+
+  const [loadout, setLoadout] = useState({ augment: null,
+    armor: null,
+    primary: null,
+    secondary: null,
+    backpack: Array(10).fill(null),
+    quickUse: Array(4).fill(null),
+    safePocket: null });
+
+  const INVENTORY_DB = [
+  {id:1,name:'Renegade III',category:'WEAPONS',sub:'Battle Rifle',rarity:'A',weight:7,qty:1,icon:'renegade_iii'},
+  {id:2,name:'Bettina II',category:'WEAPONS',sub:'Assault Rifle',rarity:'C',weight:6.5,qty:1,icon:'bettina_ii'},
+  {id:3,name:'Bobcat I',category:'WEAPONS',sub:'SMG',rarity:'D',weight:3.5,qty:1,icon:'bobcat_i'},
+  {id:4,name:'Hairpin IV',category:'WEAPONS',sub:'Pistol',rarity:'A',weight:3,qty:1,icon:'hairpin_iv'},
+  {id:5,name:'Hullcracker I',category:'WEAPONS',sub:'Launcher',rarity:'D',weight:9,qty:1,icon:'hullcracker_i'},
+  {id:6,name:'Osprey IV',category:'WEAPONS',sub:'Sniper Rifle',rarity:'A',weight:8,qty:1,icon:'osprey_iv'},
+  {id:7,name:'Vulcano I',category:'WEAPONS',sub:'Shotgun',rarity:'D',weight:7,qty:1,icon:'vulcano_i'},
+  {id:8,name:'Deadline',category:'WEAPONS',sub:'Sniper Rifle',rarity:'S',weight:7,qty:1,icon:'deadline'},
+  {id:9,name:'Equalizer',category:'WEAPONS',sub:'Special',rarity:'S',weight:5,qty:1,icon:'equalizer'},
+  {id:10,name:'Kettle IV',category:'WEAPONS',sub:'Assault Rifle',rarity:'A',weight:4,qty:1,icon:'kettle_iv'},
+  {id:11,name:'Heavy Shield',category:'SHIELDS',sub:'Shield',rarity:'A',weight:9,qty:1,icon:'heavy_shield'},
+  {id:12,name:'Medium Shield',category:'SHIELDS',sub:'Shield',rarity:'B',weight:7,qty:1,icon:'medium_shield'},
+  {id:13,name:'Light Shield',category:'SHIELDS',sub:'Shield',rarity:'C',weight:4,qty:1,icon:'light_shield'},
+  {id:14,name:'Looting Mk. 3 (Survivor)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'looting_mk3_survivor'},
+  {id:15,name:'Combat Mk. 3 (Aggressive)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'combat_mk3_aggressive'},
+  {id:16,name:'Tactical Mk. 3 (Defensive)',category:'AUGMENTS',sub:'Augment',rarity:'S',weight:1,qty:1,icon:'tactical_mk3_defensive'},
+  {id:17,name:'Looting Mk. 1',category:'AUGMENTS',sub:'Augment',rarity:'C',weight:1,qty:1,icon:'looting_mk1'},
+  {id:18,name:'Tactical Mk. 2',category:'AUGMENTS',sub:'Augment',rarity:'B',weight:1,qty:1,icon:'tactical_mk2'},
+  {id:19,name:'Silencer III',category:'MODS',sub:'Muzzle',rarity:'A',weight:0.3,qty:1,icon:'silencer_iii'},
+  {id:20,name:'Vertical Grip III',category:'MODS',sub:'Grip',rarity:'B',weight:0.5,qty:1,icon:'vertical_grip_iii'},
+  {id:21,name:'Ext. Medium Mag III',category:'MODS',sub:'Magazine',rarity:'B',weight:0.2,qty:1,icon:'extended_medium_mag_iii'},
+  {id:22,name:'Compensator II',category:'MODS',sub:'Muzzle',rarity:'C',weight:0.3,qty:2,icon:'compensator_ii'},
+  {id:23,name:'Stable Stock II',category:'MODS',sub:'Stock',rarity:'C',weight:0.3,qty:1,icon:'stable_stock_ii'},
+  {id:24,name:'Extended Barrel',category:'MODS',sub:'Barrel',rarity:'A',weight:0.4,qty:1,icon:'extended_barrel'},
+  {id:25,name:'Tempest Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'tempest_blueprint'},
+  {id:26,name:'Bettina Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'bettina_blueprint'},
+  {id:27,name:'Vita Spray Blueprint',category:'BLUEPRINTS',sub:'Medical BP',rarity:'S',weight:0,qty:1,icon:'vita_spray_blueprint'},
+  {id:28,name:'Wolfpack Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'wolfpack_blueprint'},
+  {id:29,name:'Looting Mk.3 Survivor Blueprint',category:'BLUEPRINTS',sub:'Augment BP',rarity:'S',weight:0,qty:1,icon:'looting_mk3_survivor_blueprint'},
+  {id:30,name:'Osprey Blueprint',category:'BLUEPRINTS',sub:'Weapon BP',rarity:'S',weight:0,qty:1,icon:'osprey_blueprint'},
+  {id:31,name:'Vita Spray',category:'CONSUMABLES',sub:'Healing',rarity:'A',weight:0.5,qty:3,icon:'vita_spray'},
+  {id:32,name:'Vita Shot',category:'CONSUMABLES',sub:'Healing',rarity:'B',weight:0.2,qty:5,icon:'vita_shot'},
+  {id:33,name:'Adrenaline Shot',category:'CONSUMABLES',sub:'Healing',rarity:'C',weight:0.2,qty:4,icon:'adrenaline_shot'},
+  {id:34,name:'Smoke Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'C',weight:0.5,qty:4,icon:'smoke_grenade'},
+  {id:35,name:'Snap Hook',category:'CONSUMABLES',sub:'Gadget',rarity:'A',weight:1,qty:2,icon:'snap_hook'},
+  {id:36,name:'Shield Recharger',category:'CONSUMABLES',sub:'Shield',rarity:'B',weight:0.3,qty:6,icon:'shield_recharger'},
+  {id:37,name:'Seeker Grenade',category:'CONSUMABLES',sub:'Grenade',rarity:'A',weight:0.5,qty:1,icon:'seeker_grenade'},
+  {id:38,name:'Explosive Mine',category:'CONSUMABLES',sub:'Trap',rarity:'B',weight:1,qty:2,icon:'explosive_mine'},
+  {id:39,name:'Acoustic Guitar',category:'CONSUMABLES',sub:'Gadget',rarity:'S',weight:1,qty:1,icon:'acoustic_guitar'},
+  {id:40,name:'ARC Circuitry',category:'MATERIALS',sub:'Topside',rarity:'B',weight:0.3,qty:18,icon:'arc_circuitry'},
+  {id:41,name:'ARC Powercell',category:'MATERIALS',sub:'Topside',rarity:'C',weight:0.5,qty:33,icon:'arc_powercell'},
+  {id:42,name:'Advanced Electrical Components',category:'MATERIALS',sub:'Refined',rarity:'B',weight:1,qty:8,icon:'advanced_electrical_components'},
+  {id:43,name:'Medium Gun Parts',category:'MATERIALS',sub:'Parts',rarity:'B',weight:0.5,qty:9,icon:'medium_gun_parts'},
+  {id:44,name:'Matriarch Reactor',category:'MATERIALS',sub:'ARC Part',rarity:'S',weight:1,qty:1,icon:'matriarch_reactor'},
+  {id:45,name:'Heavy Ammo',category:'MATERIALS',sub:'Ammo',rarity:'C',weight:0.1,qty:45,icon:'heavy_ammo'},
+  {id:46,name:'Sensors',category:'MATERIALS',sub:'Refined',rarity:'B',weight:0.3,qty:6,icon:'sensors'},
+  {id:47,name:'Rubber Parts',category:'MATERIALS',sub:'Basic',rarity:'D',weight:0.3,qty:28,icon:'rubber_parts'},
+  {id:48,name:'Raider Hatch Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'raider_hatch_key'},
+  {id:49,name:'Dam Control Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'dam_control_tower_key'},
+  {id:50,name:'Stella Montis Archives Key',category:'KEYS',sub:'Key',rarity:'B',weight:0.1,qty:1,icon:'stella_montis_archives_key'},
+  {id:51,name:'Spaceport Control Tower Key',category:'KEYS',sub:'Key',rarity:'C',weight:0.1,qty:1,icon:'spaceport_control_tower_key'},
+  {id:52,name:'Agave',category:'NATURE',sub:'Plant',rarity:'C',weight:0.2,qty:5,icon:'agave'},
+  {id:53,name:'Mushroom',category:'NATURE',sub:'Plant',rarity:'C',weight:0.1,qty:5,icon:'mushroom'},
+  {id:54,name:'Volcanic Rock',category:'NATURE',sub:'Mineral',rarity:'C',weight:0.5,qty:4,icon:'volcanic_rock'},
+  {id:55,name:'Prickly Pear',category:'NATURE',sub:'Food',rarity:'C',weight:0.2,qty:3,icon:'prickly_pear'},
+  {id:56,name:'Fine Wristwatch',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.1,qty:1,icon:'fine_wristwatch'},
+  {id:57,name:'Rubber Duck',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.1,qty:1,icon:'rubber_duck'},
+  {id:58,name:'Music Box',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.3,qty:1,icon:'music_box'},
+  {id:59,name:'Alarm Clock',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:2,qty:1,icon:'alarm_clock'},
+  {id:60,name:'Breathtaking Snow Globe',category:'TRINKETS',sub:'Trinket',rarity:'B',weight:0.5,qty:1,icon:'breathtaking_snow_globe'},
+  {id:61,name:'Dart Board',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.5,qty:1,icon:'dart_board'}
+  ];;
 
   const CATEGORIES = [
     {id:'ALL',label:'ALL'},
@@ -745,7 +817,61 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
 
   ];
 
+
+  const CUSTOM_LOADOUTS = [
+    { id:'budget-looting', name:'BUDGET LOOTING', buildable:true,
+      desc:'Lightweight entry kit. Looting augment maximises pickups. Anvil for close range, Ferro for mid.',
+      cost:[{item:'Seeds',qty:65},{item:'Light Gun Parts',qty:4},{item:'ARC Alloy',qty:3},{item:'ARC Powercell',qty:2}],
+      primary:'Anvil I', secondary:'Ferro I', armor:'Light Shield', augment:'Looting Mk. 1',
+      quickUse:['Bandage','Adrenaline Shot','Shield Recharger'], ammo:['Heavy Ammo','Heavy Ammo','Heavy Ammo'] },
+    { id:'budget-combat', name:'BUDGET COMBAT', buildable:false,
+      desc:'Aggressive close-range setup. Light shield keeps weight low for fast pushes.',
+      cost:[{item:'Seeds',qty:85},{item:'Light Gun Parts',qty:5},{item:'ARC Powercell',qty:3}],
+      primary:'Burletta I', secondary:'Il Toro', armor:'Light Shield', augment:'Combat Mk. 2',
+      quickUse:['Bandage','Adrenaline Shot','Shield Recharger'], ammo:['Light Ammo','Light Ammo','Shotgun Ammo'] },
+    { id:'sniper-looting', name:'SNIPER LOOTING', buildable:true,
+      desc:'Long-range precision paired with looting bonus. Venator II as close-range backup.',
+      cost:[{item:'Seeds',qty:95},{item:'Medium Gun Parts',qty:3},{item:'ARC Circuitry',qty:2},{item:'ARC Alloy',qty:4}],
+      primary:'Osprey', secondary:'Venator II', armor:'Light Shield', augment:'Looting Mk. 2',
+      quickUse:['Bandage','Adrenaline Shot','Shield Recharger'], ammo:['Medium Ammo','Medium Ammo','Medium Ammo'] },
+    { id:'assault-tactical', name:'ASSAULT TACTICAL', buildable:false,
+      desc:'Versatile mid-range kit. Tactical augment sustains you through drawn-out engagements.',
+      cost:[{item:'Seeds',qty:80},{item:'Medium Gun Parts',qty:4},{item:'ARC Circuitry',qty:2}],
+      primary:'Tempest I', secondary:'Venator II', armor:'Medium Shield', augment:'Tactical Mk. 2',
+      quickUse:['Bandage','Adrenaline Shot','Shield Recharger'], ammo:['Medium Ammo','Medium Ammo','Light Ammo'] },
+    { id:'heavy-combat', name:'HEAVY COMBAT', buildable:false,
+      desc:'Maximum firepower and protection. Built for aggressive raids and boss-tier encounters.',
+      cost:[{item:'Seeds',qty:100},{item:'Heavy Gun Parts',qty:3},{item:'ARC Circuitry',qty:4}],
+      primary:'Torrente', secondary:'Bobcat I', armor:'Heavy Shield', augment:'Combat Mk. 3 (Aggressive)',
+      quickUse:['Bandage','Adrenaline Shot','Shield Recharger'], ammo:['Heavy Ammo','Heavy Ammo','Light Ammo'] },
+  ];
+
+  const handleCraftLoadout = (ld) => {
+    var find = function(name) { return window.INVENTORY_DB.find(function(i){ return i.name === name; }) || null; };
+    setLoadout({
+      augment: find(ld.augment),
+      armor: find(ld.armor),
+      primary: find(ld.primary),
+      secondary: find(ld.secondary),
+      backpack: [find(ld.ammo[0]), find(ld.ammo[1]), find(ld.ammo[2]), null, null, null, null, null, null, null],
+      quickUse: [find(ld.quickUse[0]), find(ld.quickUse[1]), find(ld.quickUse[2]), null],
+      safePocket: null,
+    });
+    playCraftSound();
+    setClModal(null);
+    setClOpen(false);
+  };
+
+  var clModalData = clModal ? CUSTOM_LOADOUTS.find(function(l){ return l.id === clModal; }) : null;
+
+  var playCraftSound = function() {
+    var snd = new Audio('assets/loadout-craft.mp3');
+    snd.volume = 0.8;
+    snd.play().catch(function(){});
+  };
+
   return (
+    <>
     <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif',
     background: 'transparent',
     minHeight: '100vh',
@@ -1348,7 +1474,53 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       border: 1px solid #374151; color: #9CA3AF;
       clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
       transition: all 0.15s; }
-      .sheet-action-btn:active { border-color: #F59E0B; color: #F59E0B; transform: scale(0.95); }`}</style>
+      .sheet-action-btn:active { border-color: #F59E0B; color: #F59E0B; transform: scale(0.95); }
+      .cl-strip { margin: -16px -16px 0; border-bottom: 1px solid rgba(245,158,11,0.15); }
+      .cl-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; cursor:pointer; background:rgba(6,9,14,0.6); font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:700; color:#F59E0B; letter-spacing:2.5px; user-select:none; }
+      .cl-header:active { background:rgba(245,158,11,0.06); }
+      .cl-cards { padding:8px 12px 12px; display:flex; flex-direction:column; gap:6px; }
+      .cl-card { border-radius:6px; overflow:hidden; border:1px solid rgba(55,65,81,0.4); background:rgba(8,12,20,0.85); }
+      .cl-card.buildable { border-color:rgba(16,185,129,0.45); }
+      .cl-card.locked { opacity:0.55; }
+      .cl-card-header { display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; user-select:none; }
+      .cl-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+      .cl-dot.buildable { background:#10B981; box-shadow:0 0 6px rgba(16,185,129,0.6); }
+      .cl-dot.locked { background:#4B5563; }
+      .cl-card-name { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; color:#E5E7EB; letter-spacing:1.5px; flex:1; }
+      .cl-card.buildable .cl-card-name { color:#fff; }
+      .cl-card-body { padding:0 12px 12px; border-top:1px solid rgba(55,65,81,0.25); }
+      .cl-desc { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#9CA3AF; line-height:1.45; padding:8px 0 6px; }
+      .cl-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+      .cl-tag { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.5px; padding:2px 7px; border-radius:3px; background:rgba(30,41,59,0.8); border:1px solid rgba(55,65,81,0.5); color:#D1D5DB; }
+      .cl-cost-title { font-family:'Rajdhani',sans-serif; font-size:0.62rem; font-weight:700; color:#6B7280; letter-spacing:2px; margin-bottom:5px; }
+      .cl-cost-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+      .cl-cost-row:last-child { border-bottom:none; }
+      .cl-cost-name { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#D1D5DB; }
+      .cl-cost-qty { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:700; color:#F59E0B; }
+      .cl-btns { display:flex; gap:6px; margin-top:10px; }
+      .cl-btn { flex:1; padding:8px 4px; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:1px; cursor:pointer; border-radius:4px; border:1px solid; transition:all 0.15s; text-align:center; }
+      .cl-btn:active { transform:scale(0.96); }
+      .cl-btn-track { background:rgba(30,41,59,0.7); border-color:rgba(55,65,81,0.5); color:#9CA3AF; display:flex; align-items:center; justify-content:center; gap:4px; }
+      .cl-btn-track.tracked { border-color:rgba(6,182,212,0.5); color:#06B6D4; background:rgba(6,182,212,0.08); }
+      .cl-btn-details { background:rgba(30,41,59,0.5); border-color:rgba(55,65,81,0.3); color:#6B7280; }
+      .cl-btn-craft { background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.5); color:#10B981; }
+      .cl-btn-craft.locked { background:rgba(30,41,59,0.4); border-color:rgba(55,65,81,0.3); color:#4B5563; cursor:not-allowed; }
+      .cl-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:950; display:flex; align-items:flex-end; justify-content:center; }
+      .cl-modal { width:100%; max-width:480px; background:#0d1620; border-top:2px solid #10B981; border-left:1px solid #374151; border-right:1px solid #374151; border-radius:14px 14px 0 0; padding:20px 18px 32px; animation:slideUp 0.22s ease; }
+      .cl-modal-handle { width:36px; height:3px; background:#374151; border-radius:2px; margin:0 auto 14px; }
+      .cl-modal-title { font-family:'Orbitron',sans-serif; font-size:0.85rem; font-weight:700; color:#10B981; letter-spacing:2px; margin-bottom:4px; }
+      .cl-modal-sub { font-family:'Rajdhani',sans-serif; font-size:0.7rem; color:#6B7280; letter-spacing:1.5px; margin-bottom:14px; }
+      .cl-modal-cost { background:rgba(6,9,14,0.8); border:1px solid rgba(55,65,81,0.4); border-radius:6px; padding:10px 12px; margin-bottom:14px; }
+      .cl-modal-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(55,65,81,0.2); font-family:'Rajdhani',sans-serif; }
+      .cl-modal-row:last-child { border-bottom:none; }
+      .cl-modal-item { font-size:0.78rem; color:#D1D5DB; }
+      .cl-modal-qty { font-size:0.78rem; font-weight:700; color:#F59E0B; }
+      .cl-modal-btns { display:flex; gap:8px; }
+      .cl-modal-btn { flex:1; padding:13px; font-family:'Rajdhani',sans-serif; font-size:0.85rem; font-weight:700; letter-spacing:2px; cursor:pointer; border-radius:4px; }
+      .cl-modal-cancel { background:rgba(30,41,59,0.8); color:#9CA3AF; border:1px solid #374151; }
+      .cl-modal-details { background:rgba(30,41,59,0.6); color:#6B7280; border:1px solid #374151; font-size:0.72rem; }
+      .cl-modal-confirm { background:#10B981; color:#000; border:none; }
+`}</style>
 
     <div className="container" onClick={() => dropdown && setDropdown(null)}>
 
@@ -1383,6 +1555,62 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       <div className="main-content" ref={mainContentRef}>
        {activeTab === 'INVENTORY' && (
          <>
+
+          <div className="cl-strip">
+            <div className="cl-header" onClick={function(){ setClOpen(!clOpen); }}>
+              <span>CUSTOM LOADOUTS</span>
+              <span style={{fontSize:'0.7rem',transition:'transform 0.2s',display:'inline-block',transform:clOpen?'rotate(180deg)':'none'}}>v</span>
+            </div>
+            {clOpen && (
+              <div className="cl-cards">
+                {CUSTOM_LOADOUTS.map(function(ld){
+                  var isOpen = clExpanded === ld.id;
+                  var isTracked = clTracked.indexOf(ld.id) !== -1;
+                  return (
+                    <div key={ld.id} className={'cl-card ' + (ld.buildable ? 'buildable' : 'locked')}>
+                      <div className="cl-card-header" onClick={function(){ setClExpanded(isOpen ? null : ld.id); }}>
+                        <div className={'cl-dot ' + (ld.buildable ? 'buildable' : 'locked')} />
+                        <span className="cl-card-name">{ld.name}</span>
+                        {!ld.buildable && <span style={{fontSize:'0.7rem',color:'#4B5563'}}>locked</span>}
+                        <span style={{fontSize:'0.65rem',color:'#6B7280',transition:'transform 0.2s',display:'inline-block',transform:isOpen?'rotate(180deg)':'none'}}>v</span>
+                      </div>
+                      {isOpen && (
+                        <div className="cl-card-body">
+                          <div className="cl-desc">{ld.desc}</div>
+                          <div className="cl-tags">
+                            <span className="cl-tag">{ld.primary}</span>
+                            <span className="cl-tag">{ld.secondary}</span>
+                            <span className="cl-tag">{ld.armor}</span>
+                            <span className="cl-tag">{ld.augment}</span>
+                            {ld.quickUse.map(function(q){ return <span key={q} className="cl-tag">{q} x3</span>; })}
+                          </div>
+                          <div className="cl-cost-title">ESTIMATED COST</div>
+                          {ld.cost.map(function(c){ return (
+                            <div key={c.item} className="cl-cost-row">
+                              <span className="cl-cost-name">{c.item}</span>
+                              <span className="cl-cost-qty">x{c.qty}</span>
+                            </div>
+                          ); })}
+                          <div className="cl-btns">
+                            <button className={'cl-btn cl-btn-track' + (isTracked ? ' tracked' : '')}
+                              onClick={function(){ setClTracked(isTracked ? clTracked.filter(function(x){ return x !== ld.id; }) : clTracked.concat([ld.id])); }}>
+                              <span>O</span>
+                              <span>{isTracked ? 'UNTRACK' : 'TRACK'}</span>
+                            </button>
+                            <button className="cl-btn cl-btn-details">FULL DETAILS</button>
+                            <button className={'cl-btn cl-btn-craft' + (!ld.buildable ? ' locked' : '')}
+                              onClick={function(){ if(ld.buildable){ setClModal(ld.id); } }}>
+                              CRAFT
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <div className="loadout-section">
             <div className="section-title">
@@ -1959,11 +2187,51 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       )}
 
     </div>
+
+      {clModalData && (
+        <div className="cl-overlay" onClick={function(){ setClModal(null); }}>
+          <div className="cl-modal" onClick={function(e){ e.stopPropagation(); }}>
+            <div className="cl-modal-handle" />
+            <div className="cl-modal-title">{clModalData.name}</div>
+            <div className="cl-modal-sub">CRAFT THIS LOADOUT?</div>
+            <div className="cl-modal-cost">
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#6B7280',letterSpacing:'2px',marginBottom:'8px'}}>REQUIRED MATERIALS</div>
+              {clModalData.cost.map(function(c){ return (
+                <div key={c.item} className="cl-modal-row">
+                  <span className="cl-modal-item">{c.item}</span>
+                  <span className="cl-modal-qty">x{c.qty}</span>
+                </div>
+              ); })}
+            </div>
+            <div className="cl-modal-btns">
+              <button className="cl-modal-btn cl-modal-cancel" onClick={function(){ setClModal(null); }}>CANCEL</button>
+              <button className="cl-modal-btn cl-modal-details">FULL DETAILS</button>
+              <button className="cl-modal-btn cl-modal-confirm" onClick={function(){ handleCraftLoadout(clModalData); }}>CONFIRM</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 };
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
-</script></body></html>
+</script>
+<script>
+window.addEventListener('load', function() {
+  try {
+    var src = document.getElementById('app-src').textContent;
+    var compiled = Babel.transform(src, {presets:['react']}).code;
+    try { eval(compiled); }
+    catch(e2) {
+      document.getElementById('root').innerHTML = '<div style="color:#f87171;padding:20px;font-family:monospace;background:#0d0d0d;position:fixed;inset:0;overflow:auto;z-index:9999"><b>RUNTIME ERROR</b><br><br>' + e2.message + '<br><br><pre>' + (e2.stack||'') + '</pre></div>';
+    }
+  } catch(e) {
+    document.getElementById('root').innerHTML = '<div style="color:#f87171;padding:20px;font-family:monospace;background:#0d0d0d;position:fixed;inset:0;overflow:auto;z-index:9999"><b>BABEL ERROR</b><br><br>' + e.message.replace(/</g,'&lt;') + '</div>';
+  }
+});
+</script>
+</body></html>
