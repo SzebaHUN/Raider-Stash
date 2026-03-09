@@ -466,9 +466,7 @@ function tryPlayMusic() {
     document.removeEventListener('touchend', tryPlayMusic);
   }).catch(function() {});
 }
-// Try immediately — works if browser allows it
 tryPlayMusic();
-// Fall back to first user interaction anywhere on screen
 document.addEventListener('touchstart', tryPlayMusic, {once: true});
 document.addEventListener('touchend', tryPlayMusic, {once: true});
 document.addEventListener('click', tryPlayMusic, {once: true});
@@ -1097,9 +1095,10 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       box-shadow: 0 8px 40px rgba(0,0,0,0.9);
       animation: dropIn 0.15s ease;
       overflow: hidden;
-      max-height: 70vh;
+      max-height: 72vh;
       display: flex;
-      flex-direction: column; }
+      flex-direction: column;
+      box-sizing: border-box; }
       @keyframes dropIn { from { opacity: 0; transform: translateY(-6px); }
       to { opacity: 1; transform: translateY(0); } }
       .dropdown-header { display: flex;
@@ -1151,10 +1150,13 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .dropdown-cat-btn-icon { font-size: 1.1rem; width: 22px; text-align: center; }
       .dropdown-cat-btn-arrow { margin-left: auto; color: #4B5563; }
       .dropdown-items-grid { display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      padding: 10px;
-      overflow-y: auto; }
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+      padding: 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box; }
       .dropdown-item-card { background: rgba(30,41,59,0.9);
       border: 1.5px solid;
       aspect-ratio: 1;
@@ -1162,15 +1164,19 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4px;
+      padding: 3px;
       cursor: pointer;
-      clip-path: polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px); }
+      border-radius: 4px;
+      overflow: hidden;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box; }
       .dropdown-item-card:active { opacity: 0.7; }
       .dropdown-item-card.rarity-S { border-color: #EC4899; }
       .dropdown-item-card.rarity-A { border-color: #F59E0B; }
       .dropdown-item-card.rarity-B { border-color: #06B6D4; }
       .dropdown-item-card.rarity-C { border-color: #374151; }
-      .dropdown-item-icon { font-size: 1.5rem; line-height: 1; }
+      .dropdown-item-icon { width: 100%; aspect-ratio: 1; overflow: hidden; display: block; }
       .dropdown-item-name { font-family: 'Rajdhani', sans-serif;
       font-size: 0.48rem;
       color: #9CA3AF;
@@ -2254,7 +2260,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       )}
 
       {dropdown && (
-       <div className="dropdown-overlay" style={{top: dropdown.top !== undefined ? dropdown.top : "auto", bottom: dropdown.bottom !== undefined ? dropdown.bottom : "auto", left: dropdown.left, right: dropdown.right}}
+       <div className="dropdown-overlay" style={{top: dropdown.top !== undefined ? dropdown.top : "auto", bottom: dropdown.bottom !== undefined ? dropdown.bottom : "auto", left: dropdown.left, right: dropdown.right, overflow:"hidden", boxSizing:"border-box"}}
          onClick={(e) => e.stopPropagation()}>
          {!dropdown.category ? (
           <>
@@ -2286,7 +2292,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                : getDropdownItems().map(item => (
                   <div key={item.id} className={`dropdown-item-card rarity-${item.rarity}`}
                    onClick={() => handleDropdownItemSelect(item)}>
-                   <div className="dropdown-item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.4rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                   <div className="dropdown-item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.4rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
                    <div className="dropdown-item-name">{item.name}</div>
                   </div>
                 )) }
