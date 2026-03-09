@@ -457,9 +457,21 @@
   {id:436,name:'Very Comfortable Pillow',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'very_comfortable_pillow'}
 ];</script>
 <script>
-const music=document.getElementById('menu-music');music.volume=0.35;
-function startMusic(){music.play().catch(()=>{});document.removeEventListener('click',startMusic);document.removeEventListener('keydown',startMusic);}
-music.play().catch(()=>{document.addEventListener('click',startMusic);document.addEventListener('keydown',startMusic);});
+var music = document.getElementById('menu-music');
+music.volume = 0.35;
+function tryPlayMusic() {
+  music.play().then(function() {
+    document.removeEventListener('touchstart', tryPlayMusic);
+    document.removeEventListener('click', tryPlayMusic);
+    document.removeEventListener('touchend', tryPlayMusic);
+  }).catch(function() {});
+}
+// Try immediately — works if browser allows it
+tryPlayMusic();
+// Fall back to first user interaction anywhere on screen
+document.addEventListener('touchstart', tryPlayMusic, {once: true});
+document.addEventListener('touchend', tryPlayMusic, {once: true});
+document.addEventListener('click', tryPlayMusic, {once: true});
 </script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -920,14 +932,14 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 .nav-tabs::-webkit-scrollbar { display: none; }
       .nav-tab { flex: 1;
       min-width: 0;
-      padding: 7px 4px;
+      padding: 7px 2px;
       background: rgba(15, 20, 28, 0.4);
       border: 1px solid rgba(55,65,81,0.35);
       color: #9CA3AF;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 0.8rem;
+      font-size: 0.68rem;
       font-weight: 600;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
       cursor: pointer;
       transition: all 0.2s ease;
       clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
@@ -974,7 +986,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 .category-btn.active { background: rgba(245,158,11,0.06); border-color: rgba(55,65,81,0.4); border-bottom: 2px solid #F59E0B; color: #F59E0B; }
 .category-btn:active { transform: scale(0.95); }
       .stash-grid { display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       padding: 8px 0 0 0; }
       .stash-item { aspect-ratio: 1; position: relative;
@@ -1139,7 +1151,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .dropdown-cat-btn-icon { font-size: 1.1rem; width: 22px; text-align: center; }
       .dropdown-cat-btn-arrow { margin-left: auto; color: #4B5563; }
       .dropdown-items-grid { display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 6px;
       padding: 10px;
       overflow-y: auto; }
