@@ -483,17 +483,22 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     return () => el.removeEventListener('scroll', hide); }, []);
 
   const [activeStation, setActiveStation] = useState('gunsmith');
+  const [scrappyOpen, setScrappyOpen] = useState(false);
+  const [stashOpen, setStashOpen] = useState(false);
+  const [scrappyClaimed, setScrappyClaimed] = useState(false);
   const [craftSheet, setCraftSheet] = useState(null);
   const [activeTrader, setActiveTrader] = useState('celeste');
   const [traderSubTab, setTraderSubTab] = useState('TRADES');
   const [traderSheet, setTraderSheet] = useState(null);
   const [raiderSection, setRaiderSection] = useState(null);
-  const [dailyRewardOpen, setDailyRewardOpen] = useState(false);
+  const [dailyRewardOpen, setDailyRewardOpen] = useState(null);
+  const [claimedDays, setClaimedDays] = useState([1, 2]);
   const [itemActionSheet, setItemActionSheet] = useState(null);
   const [clOpen, setClOpen] = useState(false);
   const [clExpanded, setClExpanded] = useState(null);
   const [clTracked, setClTracked] = useState([]);
   const [clModal, setClModal] = useState(null);
+  const [welcomeOpen, setWelcomeOpen] = useState(true);
   const [syncModal, setSyncModal] = useState(false);
 
 
@@ -715,9 +720,9 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   };
 
   const DECKS = [
-  { num: '001', name: 'STARTER DECK', subtitle: 'RYDER & VOYAGER', pct: 100, done: true },
-  { num: '002', name: 'GOALIE DECK', subtitle: 'GOALIE', pct: 100, done: true },
-  { num: '003', name: 'SURGEON DECK', subtitle: 'SURGEON', pct: 8, done: false },
+  { num: '001', name: 'STARTER DECK', subtitle: 'RYDER & VOYAGER', pct: 100, done: true, img: 'starter_deck' },
+  { num: '002', name: 'GOALIE DECK', subtitle: 'GOALIE', pct: 100, done: true, img: 'goalie_deck' },
+  { num: '003', name: 'SURGEON DECK', subtitle: 'SURGEON', pct: 8, done: false, img: 'surgeon_deck' },
  ];
  const DECK_CHALLENGES = [
   { label: 'Complete 1 Feat', pts: 10, done: true },
@@ -727,7 +732,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   { label: 'Supply Drops requested', pts: 10, done: false },
   { label: 'Ticks destroyed', pts: 10, done: false },
  ];
- const WORKSHOP_STATIONS = [
+   const WORKSHOP_STATIONS = [
     { id:'gunsmith', name:'GUNSMITH', img:'gunsmith', level:2, blueprints:[
     { id:'bp5', name:'Anvil I', tag:'WEAPON', rarity:'C', icon:'anvil_i', resources:[{name:'Light Gun Parts',have:15,need:8},{name:'ARC Alloy',have:47,need:5}] },
     { id:'bp6', name:'Bobcat I', tag:'WEAPON', rarity:'C', icon:'bobcat_i', resources:[{name:'Light Gun Parts',have:15,need:10},{name:'ARC Powercell',have:33,need:3}] },
@@ -1523,21 +1528,49 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .cl-modal-details { background:rgba(30,41,59,0.6); color:#6B7280; border:1px solid #374151; font-size:0.72rem; }
       .cl-modal-confirm { background:#10B981; color:#000; border:none; }
       @keyframes syncFadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+@keyframes welcomeIn { from { opacity:0; transform:translateY(30px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+      .welcome-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:950; display:flex; align-items:center; justify-content:center; padding:24px; }
+      .welcome-modal { background:linear-gradient(160deg,#0d1620 60%,#0f1e2e); border:1px solid rgba(245,158,11,0.35); border-radius:14px; padding:28px 24px 22px; max-width:340px; width:100%; text-align:center; animation:welcomeIn 0.35s ease; position:relative; box-shadow:0 0 60px rgba(245,158,11,0.1); }
+      .welcome-badge { font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; color:#F59E0B; letter-spacing:3px; margin-bottom:16px; opacity:0.7; }
+      .welcome-title { font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:800; color:#F59E0B; letter-spacing:2px; margin-bottom:14px; line-height:1.3; }
+      .welcome-body { font-family:'Rajdhani',sans-serif; font-size:0.88rem; color:#9CA3AF; letter-spacing:0.5px; line-height:1.6; margin-bottom:20px; }
+      .welcome-body span { color:#e5e7eb; font-weight:600; }
+      .welcome-rewards { background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; }
+      .welcome-rewards-label { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#9CA3AF; letter-spacing:2px; }
+      .welcome-rewards-count { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700; color:#F59E0B; }
+      .welcome-close { width:100%; padding:11px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#F59E0B; font-family:'Rajdhani',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:3px; cursor:pointer; transition:background 0.2s; }
+      .welcome-close:active { background:rgba(245,158,11,0.22); }
 `}</style>
 
     <div className="container" onClick={() => dropdown && setDropdown(null)}>
 
       <div className="header">
        <div className="player-info">
-         <div className="player-name">SAMSTAR | LVL 75</div>
+         <div className="player-name">SebHUN | LVL 75</div>
          <div className="currencies">
-          <div className="currency">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" stroke="#F59E0B" strokeWidth="1"/><circle cx="6" cy="6" r="3" fill="#F59E0B" opacity="0.7"/></svg>
-            6,838,869
+          <div className="currency" style={{color:'#e0e0e0'}}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5.5" stroke="#c8c8c8" strokeWidth="1.2"/>
+              <circle cx="6" cy="6" r="3.5" stroke="#c8c8c8" strokeWidth="0.8" fill="none"/>
+              <line x1="6" y1="1.5" x2="6" y2="10.5" stroke="#c8c8c8" strokeWidth="0.8"/>
+            </svg>
+            438,720
           </div>
           <div className="currency" style={{color:'#60A5FA'}}>
-            <svg width="10" height="11" viewBox="0 0 10 12" fill="none"><polygon points="5,0 10,5 5,12 0,5" fill="#3B82F6" opacity="0.9"/><polygon points="5,3 8,5 5,9 2,5" fill="#93C5FD"/></svg>
-            530
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5.5" stroke="#60A5FA" strokeWidth="1.2" fill="#1e3a6e"/>
+              <path d="M3 6 Q4.5 3.5 6 6 Q7.5 8.5 9 6" stroke="#60A5FA" strokeWidth="1.3" fill="none"/>
+              <path d="M3 4.5 Q4.5 2 6 4.5 Q7.5 7 9 4.5" stroke="#93C5FD" strokeWidth="0.7" fill="none"/>
+            </svg>
+            744
+          </div>
+          <div className="currency" style={{color:'#F59E0B'}}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5.5" fill="#78350f" stroke="#F59E0B" strokeWidth="1"/>
+              <path d="M1.5 5 Q3.5 2.5 6 5 Q8.5 7.5 10.5 5" stroke="#F59E0B" strokeWidth="1.2" fill="none"/>
+              <path d="M1.5 7 Q3.5 4.5 6 7 Q8.5 9.5 10.5 7" stroke="#F59E0B" strokeWidth="0.8" fill="none" opacity="0.6"/>
+            </svg>
+            1,975
           </div>
          </div>
        </div>
@@ -1801,51 +1834,124 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             </div>
           </div>
 
-          <div style={{marginTop: '16px'}}>
-            <div className="section-title">
-             STASH
-             <span className="section-count">{filteredInventory.length}/{INVENTORY_DB.length}</span>
-            </div>
 
-            <div className="category-sidebar">
-             {CATEGORIES.map(cat => (
-               <button
-                key={cat.id}
-                className={`category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat.id)}
-               >
-                <span className="icon">{cat.icon}</span>
-                <span>{cat.label}</span>
-               </button>
-             ))}
-            </div>
 
-            <div className="stash-grid">
-             {filteredInventory.map(item => (
-               <div key={item.id} className="stash-item-wrap">
-                <div
-                  className={`stash-item rarity-${item.rarity} ${highlightedItem === item.id ? 'highlighted' : ''}`}
-                  draggable={true}
-                  onDragStart={() => handleDragStart(item, 'stash')}
-                  onClick={() => handleStashItemClick(item)}
-                >
-                  <div className="item-icon"><img src={`assets/items/${item.icon}.png`} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
-                  <div className="item-name">{item.name}</div>
-                  {CATEGORY_ICONS[item.category] && <div className="item-cat-icon">{CATEGORY_ICONS[item.category]}</div>}
-                  {item.qty > 1 && <div className="item-qty-badge">+{item.qty}</div>}
+          <div style={{marginTop:'16px'}}>
+            <div
+              style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',background:'rgba(10,16,26,0.95)',border:'1px solid #1f2937',borderRadius:stashOpen?'6px 6px 0 0':'6px',cursor:'pointer'}}
+              onClick={function(){setStashOpen(!stashOpen);}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.65rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'2px'}}>STASH</span>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',letterSpacing:'1px'}}>{filteredInventory.length}/{INVENTORY_DB.length}</span>
+              </div>
+              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',fontWeight:700,color:'#F59E0B',transform:stashOpen?'rotate(180deg)':'rotate(0deg)',transition:'transform 0.2s',display:'inline-block'}}>V</span>
+            </div>
+            {stashOpen && (
+              <div style={{background:'rgba(6,9,14,0.95)',border:'1px solid #1f2937',borderTop:'none',borderRadius:'0 0 6px 6px',padding:'10px'}}>
+                <div className='category-sidebar'>
+                  {CATEGORIES.map(function(cat){ return (
+                    <button key={cat.id}
+                      className={`category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
+                      onClick={function(e){e.stopPropagation();setSelectedCategory(cat.id);}}>
+                      <span className='icon'>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  );})}
                 </div>
-                <button className="stash-item-action-btn" onClick={(e) => { e.stopPropagation(); setItemActionSheet(item); }}>⋯</button>
-               </div>
-             ))}
-            </div>
+                <div className='stash-grid'>
+                  {filteredInventory.map(function(item){ return (
+                    <div key={item.id} className='stash-item-wrap'>
+                      <div
+                        className={`stash-item rarity-${item.rarity} ${highlightedItem === item.id ? 'highlighted' : ''}`}
+                        draggable={true}
+                        onDragStart={function(){handleDragStart(item,'stash');}}
+                        onClick={function(){handleStashItemClick(item);}}
+                      >
+                        <div className='item-icon'><img src={'assets/items/'+item.icon+'.png'} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';e.target.nextSibling.style.display='flex';}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{item.sub||item.category}</div></div>
+                        <div className='item-name'>{item.name}</div>
+                        {CATEGORY_ICONS[item.category] && <div className='item-cat-icon'>{CATEGORY_ICONS[item.category]}</div>}
+                        {item.qty > 1 && <div className='item-qty-badge'>+{item.qty}</div>}
+                      </div>
+                      <button className='stash-item-action-btn' onClick={function(e){e.stopPropagation();setItemActionSheet(item);}}>...</button>
+                    </div>
+                  );})}
+                </div>
+              </div>
+            )}
           </div>
          </>
        )}
 
+
+
        {activeTab === 'WORKSHOP' && (
          <div style={{paddingBottom:'80px',padding:'16px'}}>
           <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-            {WORKSHOP_STATIONS.map(s => (
+             <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:"0.72rem",fontWeight:700,color:"#9CA3AF",letterSpacing:"2px"}}>COMPANION</div>
+               <div style={{
+                 width:"100%",aspectRatio:"2.8",
+                 background:"rgba(15,22,32,0.85)",
+                 border: scrappyOpen ? "2px solid #F59E0B" : "2px solid #1f2937",
+                 clipPath:"polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)",
+                 cursor:"pointer",overflow:"hidden",position:"relative"
+               }} onClick={function(){ setScrappyOpen(!scrappyOpen); }}>
+                 <img src="assets/stations/scrappy.png" alt="Scrappy"
+                   style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 25%"}}
+                   onError={function(e){ e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} />
+                 <div style={{display:"none",width:"100%",height:"100%",alignItems:"center",justifyContent:"center",position:"absolute",inset:0}}>SCRAPPY</div>
+                 {scrappyOpen && <div style={{position:"absolute",inset:0,background:"rgba(245,158,11,0.08)"}} />}
+                 <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 10px",background:"linear-gradient(transparent,rgba(6,10,18,0.85))"}}>
+                   <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:"0.75rem",fontWeight:700,color:scrappyOpen?"#F59E0B":"#D1D5DB",letterSpacing:"1px"}}>SCRAPPY THE ROOSTER</span>
+                 </div>
+               </div>
+               {scrappyOpen && (
+                 <div style={{background:"rgba(10,16,26,0.97)",border:"1px solid rgba(245,158,11,0.25)",borderRadius:"10px",padding:"14px",marginTop:"4px"}}>
+                   <div style={{marginBottom:"10px"}}>
+                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"0.8rem",fontWeight:700,color:"#E5E7EB",letterSpacing:"1px",marginBottom:"2px"}}>SCRAPPY THE ROOSTER</div>
+                     <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:"0.65rem",color:"#F59E0B",letterSpacing:"1px",marginBottom:"8px"}}>LEVEL 5: MASTER HOARDER</div>
+                     <div style={{display:"flex",gap:"10px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"6px",padding:"10px"}}>
+                       <img src="assets/stations/scrappy.png" style={{width:"44px",height:"44px",objectFit:"cover",objectPosition:"center 25%",borderRadius:"4px",flexShrink:0}} alt="Scrappy" />
+                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:"0.68rem",color:"#9CA3AF",lineHeight:1.5}}>This rooster has been a resident of the workshop since the day you moved in. Will periodically bring back dubiously-sourced materials and share them with you.</div>
+                     </div>
+                   </div>
+                   <div style={{marginBottom:"8px"}}>
+                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"0.7rem",fontWeight:700,color:"#E5E7EB",letterSpacing:"1px"}}>COLLECTION BOX</div>
+                     <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:"0.6rem",color:scrappyClaimed?"#6B7280":"#10B981",letterSpacing:"2px"}}>{scrappyClaimed?"EMPTY":"FULL"}</div>
+                   </div>
+                   <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"5px",marginBottom:"10px"}}>
+                     {[
+                       {icon:"metal_parts",   qty:24,cap:50},
+                       {icon:"fabric",        qty:24,cap:50},
+                       {icon:"plastic_parts", qty:24,cap:50},
+                       {icon:"chemicals",     qty:24,cap:50},
+                       {icon:"rubber_parts",  qty:24,cap:50},
+                       {icon:"assorted_seeds",qty:24,cap:50}
+                     ].map(function(item){
+                       return (
+                         <div key={item.icon} style={{aspectRatio:"1",background:"#000",borderRadius:"5.5%",overflow:"hidden",position:"relative",border:"1px solid rgba(255,255,255,0.07)",opacity:scrappyClaimed?0.35:1}}>
+                           <img src={"assets/items/"+item.icon+".png"} alt={item.icon} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={function(e){e.target.style.display="none";}} />
+                           <div style={{position:"absolute",bottom:"3px",right:"3px",fontFamily:"'Rajdhani',sans-serif",fontSize:"0.5rem",fontWeight:700,color:"#fff",background:"rgba(0,0,0,0.65)",padding:"0 2px",borderRadius:"2px"}}>{scrappyClaimed?0:item.qty}/{item.cap}</div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                   <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                     <button
+                       style={{width:"100%",padding:"11px",background:scrappyClaimed?"rgba(55,65,81,0.15)":"rgba(16,185,129,0.15)",border:scrappyClaimed?"1px solid rgba(55,65,81,0.3)":"1px solid rgba(16,185,129,0.4)",borderRadius:"7px",color:scrappyClaimed?"#4B5563":"#10B981",fontFamily:"'Rajdhani',sans-serif",fontSize:"0.78rem",fontWeight:700,letterSpacing:"3px",cursor:scrappyClaimed?"default":"pointer"}}
+                       onClick={function(e){e.stopPropagation();if(!scrappyClaimed){var snd=new Audio('assets/scrappy.mp3');snd.volume=1.0;snd.play();setScrappyClaimed(true);}}}>
+                       CLAIM
+                     </button>
+                     <button
+                       style={{width:"100%",padding:"11px",background:"rgba(55,65,81,0.15)",border:"1px solid rgba(55,65,81,0.3)",borderRadius:"7px",color:"#4B5563",fontFamily:"'Rajdhani',sans-serif",fontSize:"0.78rem",fontWeight:700,letterSpacing:"3px",cursor:"default"}}>
+                       TRAIN
+                     </button>
+                   </div>
+                 </div>
+               )}
+             </div>
+
+             {WORKSHOP_STATIONS.map(s => (
               <div key={s.id} style={{display:'flex',flexDirection:'column',gap:'6px'}}>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'2px'}}>{s.name}</div>
                 <div style={{
@@ -1964,12 +2070,12 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             <div className="daily-strip">
               <div className="daily-strip-label">DAILY LOGIN BONUS</div>
               <div className="daily-strip-row">
-                {[1,2,3,4,5,6,7].map((day, i) => { const st = day < 3 ? 'claimed' : day === 3 ? 'current' : 'upcoming';
+                {[1,2,3,4,5,6,7].map((day, i) => { const st = claimedDays.indexOf(day) !== -1 ? 'claimed' : day === 3 || day === 4 ? 'current' : 'upcoming';
                   return (
                     <React.Fragment key={day}>
-                      {i > 0 && <div className={`daily-connector ${day <= 3 ? 'done' : 'pending'}`} style={{background: day <= 3 ? 'rgba(16,185,129,0.4)' : 'rgba(55,65,81,0.35)'}} />}
+                      {i > 0 && <div className={`daily-connector ${day <= 3 ? 'done' : 'pending'}`} style={{background: claimedDays.indexOf(day) !== -1 ? 'rgba(16,185,129,0.4)' : day <= 4 ? 'rgba(245,158,11,0.4)' : 'rgba(55,65,81,0.35)'}} />}
                       <div className={`daily-slot ${st === 'current' ? 'clickable' : ''}`}
-                        onClick={() => st === 'current' && setDailyRewardOpen(true)}>
+                        onClick={() => st === 'current' && setDailyRewardOpen(day)}>
                         <div className={`daily-icon-box ${st}`}>
                           {st === 'upcoming'
                             ? <span style={{fontSize:'0.65rem',color:'#4B5563'}}>?</span>
@@ -1984,7 +2090,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                           {st === 'claimed' ? '✓' : st === 'current' ? '●' : `D${day}`}
                         </div>
                         <div className="daily-day-status" style={{color: st==='claimed'?'#10B981': st==='current'?'#F59E0B':'#374151'}}>
-                          {st === 'claimed' ? 'DONE' : st === 'current' ? 'NOW' : `DAY ${day}`}
+                          {st === 'claimed' ? 'CLAIMED' : st === 'current' ? 'NOW' : `DAY ${day}`}
                         </div>
                       </div>
                     </React.Fragment>
@@ -2006,40 +2112,53 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
        )}
 
        {activeTab === 'DECKS' && (
-         <div style={{paddingBottom: '80px'}}>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px'}}>
-            {DECKS.map(d => (
-             <div key={d.num} style={{ display: 'flex', overflow: 'hidden', border: d.done ? '1.5px solid #10B981' : '1.5px solid #1f2937', background: 'rgba(11,17,22,0.95)', clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)' }}>
-               <div style={{ width: '100px', minHeight: '80px', flexShrink: 0, background: 'linear-gradient(135deg,#0d1828 0%,#0a1220 100%)', borderRight: '1px solid #1f2937', display: 'flex', alignItems: 'flex-end', padding: '6px' }}>
-                <span style={{ fontFamily:'Orbitron', fontSize: '0.48rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px' }}>AR/RD {d.num}</span>
-               </div>
-               <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
-                <div style={{ fontFamily:'Rajdhani', fontSize: '0.9rem', fontWeight: 700, color: '#F59E0B', letterSpacing:'1.5px' }}>{d.name}</div>
-                <div style={{ fontFamily:'Rajdhani', fontSize: '0.62rem', color: '#6B7280', letterSpacing: '1px' }}>{d.subtitle}</div>
-                {d.done
-                  ? <span style={{fontFamily:'Rajdhani', fontSize: '0.62rem', fontWeight: 700, color: '#10B981'}}>COMPLETED</span>
-                  : <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
-                     <div style={{ flex: 1, height: '3px', background: '#1f2937', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{width: d.pct + '%', height: '100%', background: '#F59E0B', borderRadius: '2px'}} />
-                     </div>
-                     <span style={{fontFamily:'Rajdhani', fontSize: '0.62rem', color: '#F59E0B', fontWeight: 700}}>{d.pct}%</span>
-                   </div> }
-               </div>
-             </div>
-            ))}
+         <div style={{paddingBottom:'80px',padding:'16px'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'10px',marginBottom:'14px'}}>
+            {DECKS.map(function(d){
+              return (
+                <div key={d.num} style={{display:'flex',overflow:'hidden',border:d.done?'1.5px solid #10B981':'1.5px solid #1f2937',background:'rgba(11,17,22,0.95)',clipPath:'polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)',position:'relative'}}>
+                  <div style={{width:'90px',minHeight:'86px',flexShrink:0,position:'relative',overflow:'hidden',background:'linear-gradient(135deg,#0d1828,#0a1220)',borderRight:'1px solid #1f2937'}}>
+                    <img src={'assets/decks/'+d.img+'.png'} alt={d.name}
+                      style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top',position:'absolute',inset:0}}
+                      onError={function(e){e.target.style.display='none';}} />
+                    <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(6,10,18,0.8) 0%,transparent 60%)'}} />
+                    <div style={{position:'absolute',bottom:'5px',left:'6px',fontFamily:"'Orbitron',sans-serif",fontSize:'0.42rem',fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:'1px'}}>AR/RD {d.num}</div>
+                  </div>
+                  <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',justifyContent:'center',gap:'5px'}}>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#F59E0B',letterSpacing:'1px'}}>{d.name}</div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',letterSpacing:'1.5px'}}>{d.subtitle}</div>
+                    {d.done
+                      ? <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                          <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#10B981',flexShrink:0}} />
+                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',fontWeight:700,color:'#10B981',letterSpacing:'1px'}}>COMPLETED</span>
+                        </div>
+                      : <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                          <div style={{flex:1,height:'3px',background:'#1f2937',borderRadius:'2px',overflow:'hidden'}}>
+                            <div style={{width:d.pct+'%',height:'100%',background:'linear-gradient(90deg,#F59E0B,#FCD34D)',borderRadius:'2px'}} />
+                          </div>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#F59E0B',fontWeight:700,minWidth:'28px',textAlign:'right'}}>{d.pct}%</span>
+                        </div>
+                    }
+                  </div>
+                  {d.done && <div style={{position:'absolute',top:0,right:0,width:'3px',height:'100%',background:'linear-gradient(to bottom,#10B981,rgba(16,185,129,0.2))'}} />}
+                </div>
+              );
+            })}
           </div>
-          <div style={{ background: 'rgba(11,17,22,0.9)', border: '1px solid #1f2937', padding: '12px', clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '10px', marginBottom: '6px', borderBottom: '1px solid #1f2937' }}>
-             <span>⏱</span>
-             <span style={{fontFamily:'Orbitron', fontSize: '0.9rem', fontWeight: 700, color: '#F59E0B'}}>15:06:52</span>
-             <span style={{marginLeft: 'auto', fontFamily:'Rajdhani', fontSize: '0.68rem', color: '#6B7280'}}>Rerolls: 3</span>
+          <div style={{background:'rgba(11,17,22,0.9)',border:'1px solid #1f2937',padding:'14px',clipPath:'polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'8px',paddingBottom:'10px',marginBottom:'6px',borderBottom:'1px solid #1f2937'}}>
+             <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#F59E0B',flexShrink:0}} />
+             <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#F59E0B'}}>15:06:52</span>
+             <span style={{marginLeft:'auto',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#6B7280',letterSpacing:'1px'}}>Rerolls: 3</span>
             </div>
-            {DECK_CHALLENGES.map((ch, i) => (
-             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < DECK_CHALLENGES.length - 1 ? '1px solid #0c151e' : 'none', gap: '8px' }}>
-               <span style={{ fontFamily:'Rajdhani', fontSize: '0.75rem', color: ch.done ? '#10B981' : '#9CA3AF' }}>{ch.done ? '✓ ' : ''}{ch.label}</span>
-               <span style={{ fontFamily:'Rajdhani', fontSize: '0.72rem', fontWeight: 700, color: '#F59E0B', flexShrink: 0 }}>⬡ {ch.pts}</span>
-             </div>
-            ))}
+            {DECK_CHALLENGES.map(function(ch,i){
+             return (
+              <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:i<DECK_CHALLENGES.length-1?'1px solid #0c151e':'none',gap:'8px'}}>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',color:ch.done?'#10B981':'#9CA3AF'}}>{ch.done?'+ ':''}{ch.label}</span>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#F59E0B',flexShrink:0,letterSpacing:'0.5px'}}>{ch.pts} pts</span>
+              </div>
+             );
+            })}
           </div>
          </div>
        )}
@@ -2169,21 +2288,21 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       )}
 
       {dailyRewardOpen && (
-        <div className="daily-modal-overlay" onClick={() => setDailyRewardOpen(false)}>
+        <div className="daily-modal-overlay" onClick={() => setDailyRewardOpen(null)}>
           <div className="daily-modal" onClick={e => e.stopPropagation()}>
             <div className="daily-modal-header">
-              <div className="daily-modal-title">DAY 3 REWARD</div>
-              <button className="daily-modal-close" onClick={() => setDailyRewardOpen(false)}>✕</button>
+              <div className="daily-modal-title">DAY {dailyRewardOpen} REWARD</div>
+              <button className="daily-modal-close" onClick={() => setDailyRewardOpen(null)}>✕</button>
             </div>
             <div className="daily-modal-body">
-              <video autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}
-                onEnded={() => setDailyRewardOpen(false)}>
-                <source src="assets/daily-reward.mp4" type="video/mp4" />
+              <video key={dailyRewardOpen} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}
+                onEnded={function(){ setClaimedDays(function(prev){ return prev.indexOf(dailyRewardOpen) === -1 ? prev.concat([dailyRewardOpen]) : prev; }); setDailyRewardOpen(null); }}>
+                <source src={`assets/daily-reward${dailyRewardOpen === 4 ? '2' : ''}.mp4`} type="video/mp4" />
               </video>
             </div>
             <div className="daily-modal-footer">
-              <div className="daily-modal-sub">DAY 3 OF 7 · LOGIN STREAK</div>
-              <button className="sheet-btn sheet-btn-primary" onClick={() => setDailyRewardOpen(false)}>✦ CLAIM REWARD</button>
+              <div className="daily-modal-sub">DAY {dailyRewardOpen} OF 7 · LOGIN STREAK</div>
+              <button className="sheet-btn sheet-btn-primary" onClick={function(){ setClaimedDays(function(prev){ return prev.indexOf(dailyRewardOpen) === -1 ? prev.concat([dailyRewardOpen]) : prev; }); setDailyRewardOpen(null); }}>CLOSE</button>
             </div>
           </div>
         </div>
@@ -2215,6 +2334,20 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         </div>
       )}
     </div>
+
+      {welcomeOpen && (
+        <div className="welcome-overlay" onClick={function(){ setWelcomeOpen(false); }}>
+          <div className="welcome-modal" onClick={function(e){ e.stopPropagation(); }}>
+            <div className="welcome-title">Glad to see you made it back in one piece, Raider.</div>
+            <div className="welcome-body">Your daily rewards are waiting.</div>
+            <div className="welcome-rewards">
+              <div className="welcome-rewards-label">UNCLAIMED REWARDS</div>
+              <div className="welcome-rewards-count">2</div>
+            </div>
+            <button className="welcome-close" onClick={function(){ setWelcomeOpen(false); }}>ENTER BASE</button>
+          </div>
+        </div>
+      )}
 
       {syncModal && (
         <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
