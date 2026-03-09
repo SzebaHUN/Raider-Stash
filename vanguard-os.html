@@ -457,19 +457,11 @@
   {id:436,name:'Very Comfortable Pillow',category:'TRINKETS',sub:'Trinket',rarity:'C',weight:0.3,qty:1,icon:'very_comfortable_pillow'}
 ];</script>
 <script>
-var music = document.getElementById('menu-music');
-music.volume = 0.35;
-function tryPlayMusic() {
-  music.play().then(function() {
-    document.removeEventListener('touchstart', tryPlayMusic);
-    document.removeEventListener('click', tryPlayMusic);
-    document.removeEventListener('touchend', tryPlayMusic);
-  }).catch(function() {});
-}
+var music=document.getElementById('menu-music');music.volume=0.35;
+function tryPlayMusic(){music.play().catch(function(){});}
 tryPlayMusic();
-document.addEventListener('touchstart', tryPlayMusic, {once: true});
-document.addEventListener('touchend', tryPlayMusic, {once: true});
-document.addEventListener('click', tryPlayMusic, {once: true});
+document.addEventListener('touchstart',tryPlayMusic,{once:true});
+document.addEventListener('click',tryPlayMusic,{once:true});
 </script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -491,6 +483,19 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     const hide = () => setDropdown(null);
     el.addEventListener('scroll', hide, { passive: true });
     return () => el.removeEventListener('scroll', hide); }, []);
+
+  var STAT_STYLE = {position:'absolute',bottom:'4px',right:'4px',fontFamily:'Rajdhani,sans-serif',fontSize:'0.52rem',fontWeight:700,color:'#D1D5DB',background:'rgba(0,0,0,0.65)',padding:'1px 3px',borderRadius:'2px',lineHeight:1,zIndex:2,letterSpacing:'0.3px',pointerEvents:'none'};
+  const getItemStat = function(item) {
+    if (!item) return null;
+    if (item.category === 'WEAPONS') return '90/120';
+    if (item.category === 'AUGMENTS') return '100/100';
+    if (item.category === 'SHIELDS') return '100/100';
+    if (item.sub === 'Medium Ammo') return '80/80';
+    if (item.sub === 'Heavy Ammo') return '40/40';
+    if (item.sub === 'Light Ammo') return '120/120';
+    if (item.category === 'CONSUMABLES') return 'x3';
+    return null;
+  };
 
   const [activeStation, setActiveStation] = useState('gunsmith');
   const [scrappyOpen, setScrappyOpen] = useState(false);
@@ -693,8 +698,8 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     category: initCategory,
     top: openUpward ? undefined : slotRect.bottom + 4,
     bottom: openUpward ? (window.innerHeight - slotRect.top + 4) : undefined,
-    left: appRect.left,
-    right: window.innerWidth - appRect.right, }); };
+    left: appRect.left + 6,
+    right: window.innerWidth - appRect.right + 6, }); };
 
   const handleDropdownItemSelect = (item) => { if (!dropdown) return;
     const { slotType, slotIndex } = dropdown;
@@ -1031,7 +1036,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       color: #6B7280;
       letter-spacing: 3px;
       margin-bottom: 5px; }
-      .slot { background: rgba(6,9,14,0.35); border: 1px solid rgba(255,255,255,0.07);
+      .slot {
+      position: relative; background: rgba(6,9,14,0.35); border: 1px solid rgba(255,255,255,0.07);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1684,6 +1690,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <>
                   <div className="item-icon"><img src={`assets/items/${loadout.augment.icon}.png`} alt={loadout.augment.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.augment.sub||loadout.augment.category}</div></div>
                   <div className="item-name">{loadout.augment.name}</div>
+                  {getItemStat(loadout.augment) && <div style={STAT_STYLE}>{getItemStat(loadout.augment)}</div>}
                 </>
                ) : (
                 <>
@@ -1704,6 +1711,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <>
                   <div className="item-icon"><img src={`assets/items/${loadout.armor.icon}.png`} alt={loadout.armor.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.armor.sub||loadout.armor.category}</div></div>
                   <div className="item-name">{loadout.armor.name}</div>
+                  {getItemStat(loadout.armor) && <div style={STAT_STYLE}>{getItemStat(loadout.armor)}</div>}
                 </>
                ) : (
                 <>
@@ -1728,6 +1736,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <>
                   <div className="item-icon"><img src={`assets/items/${loadout.primary.icon}.png`} alt={loadout.primary.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.primary.sub||loadout.primary.category}</div></div>
                   <div className="item-name">{loadout.primary.name}</div>
+                  {getItemStat(loadout.primary) && <div style={STAT_STYLE}>{getItemStat(loadout.primary)}</div>}
                 </>
                ) : (
                 <>
@@ -1748,6 +1757,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <>
                   <div className="item-icon"><img src={`assets/items/${loadout.secondary.icon}.png`} alt={loadout.secondary.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.secondary.sub||loadout.secondary.category}</div></div>
                   <div className="item-name">{loadout.secondary.name}</div>
+                  {getItemStat(loadout.secondary) && <div style={STAT_STYLE}>{getItemStat(loadout.secondary)}</div>}
                 </>
                ) : (
                 <>
@@ -1784,6 +1794,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                      </div>
                    </div>
                    <div className="item-name" style={{fontSize: '0.55rem'}}>{item.name}</div>
+                  {getItemStat(item) && <div style={STAT_STYLE}>{getItemStat(item)}</div>}
                   </>
                 ) : (
                   <div className="empty-slot-text">+</div>
@@ -1806,6 +1817,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 onClick={(e) => !item && handleEmptySlotClick('quick', idx, e)}
                >
                 {item ? (
+                  <>
                   <div className="item-icon">
                      <img
                        src={`assets/items/${item.icon}.png`}
@@ -1817,6 +1829,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                        {item.sub || item.category}
                      </div>
                    </div>
+                   {getItemStat(item) && <div style={STAT_STYLE}>{getItemStat(item)}</div>}
+                  </>
                 ) : (
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none" opacity="0.15"><circle cx="11" cy="11" r="8" stroke="#9CA3AF" strokeWidth="1.2"/><circle cx="11" cy="11" r="3" stroke="#9CA3AF" strokeWidth="1"/></svg>
                 )}
@@ -1839,6 +1853,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <>
                   <div className="item-icon"><img src={`assets/items/${loadout.safePocket.icon}.png`} alt={loadout.safePocket.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} /><div style={{display:'none',width:'100%',height:'100%',alignItems:'center',justifyContent:'center',fontSize:'0.45rem',fontWeight:700,color:'rgba(255,255,255,0.2)',fontFamily:"'Rajdhani',sans-serif",textAlign:'center',lineHeight:1.1}}>{loadout.safePocket.sub||loadout.safePocket.category}</div></div>
                   <div className="item-name" style={{fontSize: '0.55rem'}}>{loadout.safePocket.name}</div>
+                  {getItemStat(loadout.safePocket) && <div style={STAT_STYLE}>{getItemStat(loadout.safePocket)}</div>}
                 </>
                ) : (
                 <>
