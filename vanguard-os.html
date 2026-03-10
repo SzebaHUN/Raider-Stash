@@ -13,7 +13,6 @@
   #side-right{left:calc(50% + 240px);right:0}
   #root{position:relative;z-index:2}
   * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-  select { -webkit-user-select: auto !important; user-select: auto !important; }
 </style></head>
 <body oncontextmenu="return false">
 <div id="video-bg"><video autoplay loop muted playsinline><source src="assets/raider-idle.mp4" type="video/mp4"></video></div>
@@ -480,7 +479,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     el.addEventListener('scroll', hide, { passive: true });
     return () => el.removeEventListener('scroll', hide); }, []);
 
-  var STAT_STYLE = {position:'absolute',bottom:'14px',right:'8px',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
+  var STAT_STYLE = {position:'absolute',bottom:'8px',right:'8px',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
   var STAT_STYLE_WEAPON = {position:'absolute',bottom:'8px',left:'30%',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
   var getStatStyle = function(item) { if (item && item.category === 'WEAPONS') return STAT_STYLE_WEAPON; return STAT_STYLE; };
   const getItemStat = function(item) {
@@ -835,7 +834,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
       weaponOptions:['Osprey IV','Stitcher','Bobcat I','Venator II','Burletta I','Anvil I'],
       shieldOptions:['Light Shield','Medium Shield','Heavy Shield'],
       augmentOptions:['Looting Mk. 1','Looting Mk. 3 (Survivor)','Tactical Mk. 2','Tactical Mk. 3 (Defensive)','Combat Mk. 3 (Aggressive)'],
-      quickOptions:['Binoculars','Snap Hook','Smoke Grenade','Remote Raider Flare','Bandage','Sterilized Bandage','Herbal Bandage','Adrenaline Shot'] },
+      quickOptions:['Binoculars','Snap Hook','Smoke Grenade','Remote Raider Flare','Bandage','Sterilized Bandage','Herbal Bandage','Adrenaline Shot','Deadline'] },
     { id:'assault-tactical', name:'ASSAULT TACTICAL', buildable:false,
       desc:'Versatile mid-range kit. Tactical augment sustains you through drawn-out engagements.',
       cost:[{item:'Seeds',qty:80},{item:'Medium Gun Parts',qty:4},{item:'ARC Circuitry',qty:2}],
@@ -853,6 +852,36 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
       augmentOptions:['Combat Mk. 3 (Aggressive)','Tactical Mk. 2','Tactical Mk. 3 (Defensive)','Looting Mk. 1','Looting Mk. 3 (Survivor)'],
       quickOptions:['Vita Shot','Vita Spray','Surge Shield Recharger','Defibrillator','Wolfpack','Blaze Grenade','Seeker Grenade','Showstopper','Photoelectric Cloak',"Trigger \'Nade"] },
   ];
+
+  // Custom in-game style dropdown
+  const [clDdOpen, setClDdOpen] = useState(null);
+  const ClDropdown = function({id, value, opts, stash, onChange}) {
+    var isOpen = clDdOpen === id;
+    return (
+      <div className="cl-dd-wrap">
+        <div className="cl-dd-btn" onClick={function(e){ e.stopPropagation(); setClDdOpen(isOpen ? null : id); }}>
+          <span>{value}</span>
+          <span style={{fontSize:'0.55rem',opacity:0.6,marginLeft:'4px'}}>{isOpen ? '▲' : '▼'}</span>
+        </div>
+        {isOpen && (
+          <div className="cl-dd-list" onClick={function(e){ e.stopPropagation(); }}>
+            {opts.map(function(opt){
+              var inStash = stash.some(function(s){ return s&&s.name===opt; });
+              var isSel = opt === value;
+              return (
+                <div key={opt} className={'cl-dd-item ' + (isSel ? 'selected' : inStash ? 'owned' : 'unowned')}
+                  onClick={function(){ onChange(opt); setClDdOpen(null); }}>
+                  <span>{opt}</span>
+                  {isSel && <div className="cl-dd-dot"/>}
+                  {!inStash && !isSel && <span style={{fontSize:'0.6rem',opacity:0.5}}>✕</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const WEAPON_AMMO = {
     'Hairpin I':'Light Ammo','Hairpin II':'Light Ammo','Hairpin III':'Light Ammo','Hairpin IV':'Light Ammo',
@@ -1588,7 +1617,22 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .cl-modal-cancel { background:rgba(30,41,59,0.8); color:#9CA3AF; border:1px solid #374151; }
       .cl-modal-details { background:rgba(30,41,59,0.6); color:#6B7280; border:1px solid #374151; font-size:0.72rem; }
       .cl-modal-confirm { background:#10B981; color:#000; border:none; }
-      @keyframes syncFadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+      .cl-dd-wrap { position:relative; flex:1; }
+      .cl-dd-btn { width:100%; background:rgba(10,16,26,0.85); border:1px solid rgba(55,65,81,0.5); color:#E5E7EB; fontFamily:Rajdhani,sans-serif; font-size:0.75rem; font-weight:600; padding:5px 8px; border-radius:3px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; letter-spacing:0.5px; }
+      .cl-dd-btn:active { border-color:rgba(16,185,129,0.4); }
+      .cl-dd-list { position:absolute; top:calc(100% + 3px); left:0; right:0; background:rgba(8,13,22,0.97); border:1px solid rgba(55,65,81,0.6); border-radius:4px; z-index:999; max-height:160px; overflow-y:auto; backdrop-filter:blur(8px); }
+      .cl-dd-list::-webkit-scrollbar { width:3px; }
+      .cl-dd-list::-webkit-scrollbar-track { background:transparent; }
+      .cl-dd-list::-webkit-scrollbar-thumb { background:rgba(55,65,81,0.6); border-radius:2px; }
+      .cl-dd-item { padding:6px 10px; font-family:Rajdhani,sans-serif; font-size:0.75rem; font-weight:600; letter-spacing:0.5px; cursor:pointer; border-bottom:1px solid rgba(30,40,55,0.5); display:flex; justify-content:space-between; align-items:center; }
+      .cl-dd-item:last-child { border-bottom:none; }
+      .cl-dd-item.owned { color:#E5E7EB; }
+      .cl-dd-item.owned:hover { background:rgba(16,185,129,0.12); color:#10B981; }
+      .cl-dd-item.unowned { color:#4B5563; }
+      .cl-dd-item.unowned:hover { background:rgba(30,40,55,0.4); color:#6B7280; }
+      .cl-dd-item.selected { color:#10B981; }
+      .cl-dd-dot { width:5px; height:5px; border-radius:50%; background:#10B981; flex-shrink:0; }
+            @keyframes syncFadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
 @keyframes welcomeIn { from { opacity:0; transform:translateY(30px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
       .welcome-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:950; display:flex; align-items:center; justify-content:center; padding:24px; }
       .welcome-modal { background:linear-gradient(160deg,#0d1620 60%,#0f1e2e); border:1px solid rgba(245,158,11,0.35); border-radius:14px; padding:28px 24px 22px; max-width:340px; width:100%; text-align:center; animation:welcomeIn 0.35s ease; position:relative; box-shadow:0 0 60px rgba(245,158,11,0.1); }
@@ -1672,29 +1716,27 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                         <span style={{fontSize:'0.65rem',color:'#6B7280',transition:'transform 0.2s',display:'inline-block',transform:isOpen?'rotate(180deg)':'none'}}>v</span>
                       </div>
                       {isOpen && (
-                        <div className="cl-card-body">
+                        <div className="cl-card-body" onClick={function(){ setClDdOpen(null); }}>
                           <div className="cl-desc">{ld.desc}</div>
                           {clEditing === ld.id ? (
-                            <div style={{display:'flex',flexDirection:'column',gap:'5px',marginBottom:'8px'}}>
+                            <div style={{display:'flex',flexDirection:'column',gap:'5px',marginBottom:'8px'}} onClick={function(e){ e.stopPropagation(); }}>
                               {[
-                                {label:'PRIMARY',   field:'primary',   opts:ld.weaponOptions,  type:'weapon'},
-                                {label:'SECONDARY', field:'secondary', opts:ld.weaponOptions,  type:'weapon'},
-                                {label:'SHIELD',    field:'shield',    opts:ld.shieldOptions,  type:'other'},
-                                {label:'AUGMENT',   field:'augment',   opts:ld.augmentOptions, type:'other'},
+                                {label:'PRIMARY',   field:'primary',   opts:ld.weaponOptions},
+                                {label:'SECONDARY', field:'secondary', opts:ld.weaponOptions},
+                                {label:'SHIELD',    field:'shield',    opts:ld.shieldOptions},
+                                {label:'AUGMENT',   field:'augment',   opts:ld.augmentOptions},
                               ].map(function(row){ return (
                                 <div key={row.field} style={{display:'flex',alignItems:'center',gap:'6px'}}>
                                   <span style={{fontFamily:'Rajdhani,sans-serif',fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'1.5px',minWidth:'62px'}}>{row.label}</span>
-                                  <select value={clSelections[ld.id][row.field]} onChange={function(e){ var v=e.target.value; setClSelections(function(prev){ var n={...prev}; n[ld.id]={...n[ld.id],[row.field]:v}; return n; }); }} style={{flex:1,background:'rgba(15,22,32,0.9)',border:'1px solid rgba(55,65,81,0.5)',color:'#E5E7EB',fontFamily:'Rajdhani,sans-serif',fontSize:'0.75rem',fontWeight:600,padding:'3px 6px',borderRadius:'3px',outline:'none'}}>
-                                    {row.opts.map(function(opt){ var inStash=STASH_DB.some(function(s){ return s&&s.name===opt; }); return <option key={opt} value={opt} style={{color:inStash?'#E5E7EB':'#4B5563',background:'#0f1620'}}>{inStash?opt:opt+' ✕'}</option>; })}
-                                  </select>
+                                  <ClDropdown id={ld.id+'-'+row.field} value={clSelections[ld.id][row.field]} opts={row.opts} stash={STASH_DB}
+                                    onChange={function(v){ setClSelections(function(prev){ var n={...prev}; n[ld.id]={...n[ld.id],[row.field]:v}; return n; }); }} />
                                 </div>
                               ); })}
                               {[0,1,2].map(function(qi){ return (
                                 <div key={qi} style={{display:'flex',alignItems:'center',gap:'6px'}}>
                                   <span style={{fontFamily:'Rajdhani,sans-serif',fontSize:'0.6rem',fontWeight:700,color:'#6B7280',letterSpacing:'1.5px',minWidth:'62px'}}>QUICK {qi+1}</span>
-                                  <select value={clSelections[ld.id].quickUse[qi]} onChange={function(e){ var val=e.target.value; setClSelections(function(prev){ var n={...prev}; var q=[...n[ld.id].quickUse]; q[qi]=val; n[ld.id]={...n[ld.id],quickUse:q}; return n; }); }} style={{flex:1,background:'rgba(15,22,32,0.9)',border:'1px solid rgba(55,65,81,0.5)',color:'#E5E7EB',fontFamily:'Rajdhani,sans-serif',fontSize:'0.75rem',fontWeight:600,padding:'3px 6px',borderRadius:'3px',outline:'none'}}>
-                                    {ld.quickOptions.map(function(q){ var inStash=STASH_DB.some(function(s){ return s&&s.name===q; }); return <option key={q} value={q} style={{color:inStash?'#E5E7EB':'#4B5563',background:'#0f1620'}}>{inStash?q:q+' ✕'}</option>; })}
-                                  </select>
+                                  <ClDropdown id={ld.id+'-q'+qi} value={clSelections[ld.id].quickUse[qi]} opts={ld.quickOptions} stash={STASH_DB}
+                                    onChange={function(v){ setClSelections(function(prev){ var n={...prev}; var q=[...n[ld.id].quickUse]; q[qi]=v; n[ld.id]={...n[ld.id],quickUse:q}; return n; }); }} />
                                 </div>
                               ); })}
                             </div>
