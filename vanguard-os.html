@@ -510,23 +510,20 @@ if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('pause', function(){ music.pause(); });
 }
 
-var heyPlayed = false;
 function tryPlayMusic() {
-  music.play().then(function(){
-    if (!heyPlayed) {
-      heyPlayed = true;
-      setTimeout(function(){
-        var hey = new Audio('assets/hey_raider.mp3');
-        hey.volume = 1.0;
-        hey.play().catch(function(){});
-      }, 1000);
-    }
-  }).catch(function(){});
+  music.play().catch(function(){});
 }
 
 tryPlayMusic();
 document.addEventListener('touchstart', tryPlayMusic, {once: true});
 document.addEventListener('click', tryPlayMusic, {once: true});
+
+// hey_raider plays exactly once, 1 second after page load
+setTimeout(function(){
+  var hey = new Audio('assets/hey_raider.mp3');
+  hey.volume = 1.0;
+  hey.play().catch(function(){});
+}, 1000);
 </script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
