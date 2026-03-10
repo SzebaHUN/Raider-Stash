@@ -510,14 +510,17 @@ if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('pause', function(){ music.pause(); });
 }
 
+var heyPlayed = false;
 function tryPlayMusic() {
   music.play().then(function(){
-    // Play hey_raider.mp3 2 seconds after app loads, once
-    setTimeout(function(){
-      var hey = new Audio('assets/hey_raider.mp3');
-      hey.volume = 1.0;
-      hey.play().catch(function(){});
-    }, 2000);
+    if (!heyPlayed) {
+      heyPlayed = true;
+      setTimeout(function(){
+        var hey = new Audio('assets/hey_raider.mp3');
+        hey.volume = 1.0;
+        hey.play().catch(function(){});
+      }, 1000);
+    }
   }).catch(function(){});
 }
 
