@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VANGUARD OS">
+<meta name="theme-color" content="#060c12">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;VANGUARD OS&quot;,&quot;short_name&quot;:&quot;VANGUARD&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;orientation&quot;:&quot;portrait&quot;,&quot;background_color&quot;:&quot;#060c12&quot;,&quot;theme_color&quot;:&quot;#060c12&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;assets/icon-192.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;},{&quot;src&quot;:&quot;assets/icon-512.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
 <title>VANGUARD OS</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -11,7 +18,7 @@
   #side-left,#side-right{position:fixed;top:0;bottom:0;background:#060c12;z-index:1}
   #side-left{left:0;right:calc(50% + 240px)}
   #side-right{left:calc(50% + 240px);right:0}
-  #root{position:relative;z-index:2}
+  #root{position:relative;z-index:2;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
   * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 </style></head>
 <body oncontextmenu="return false">
