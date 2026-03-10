@@ -481,7 +481,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     return () => el.removeEventListener('scroll', hide); }, []);
 
   var STAT_STYLE = {position:'absolute',bottom:'14px',right:'8px',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
-  var STAT_STYLE_WEAPON = {position:'absolute',bottom:'14px',right:'50px',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
+  var STAT_STYLE_WEAPON = {position:'absolute',bottom:'14px',left:'50%',transform:'translateX(-30%)',zIndex:2,pointerEvents:'none',fontFamily:'Rajdhani,sans-serif',fontSize:'1.55rem',fontWeight:700,letterSpacing:'0.5px',lineHeight:1,color:'#9CA3AF'};
   var getStatStyle = function(item) { if (item && item.category === 'WEAPONS') return STAT_STYLE_WEAPON; return STAT_STYLE; };
   const getItemStat = function(item) {
     if (!item) return null;
