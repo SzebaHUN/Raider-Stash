@@ -553,12 +553,18 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [tradeDropdown, setTradeDropdown] = useState(null);
   const [tradeWaiting, setTradeWaiting] = useState(false);
   const [tradeOfflineOffer, setTradeOfflineOffer] = useState(null);
+  const [tradeOfflineComment, setTradeOfflineComment] = useState('');
+  const [tradeOfferSentToast, setTradeOfferSentToast] = useState(null);
   const [tradeExpandedNotif, setTradeExpandedNotif] = useState(null);
   const [tradeNotifs, setTradeNotifs] = useState([
-    { id:1, type:'accepted', username:'GhostRaider',  gave:'Osprey Blueprint',  got:'Bettina Blueprint',   time:'2h ago' },
-    { id:2, type:'declined', username:'ArcHunter',    gave:'Tempest Blueprint', got:null,                  time:'5h ago' },
-    { id:3, type:'incoming', username:'SteelThorn',   item:'Wolfpack Blueprint',                           time:'Yesterday' },
-    { id:4, type:'accepted', username:'NightCrawler', gave:'Rubber Duck',       got:'Music Box',           time:'2 days ago' },
+    { id:1, type:'accepted', username:'GhostRaider',  gave:'Osprey Blueprint',  got:'Bettina Blueprint',   time:'2h ago',
+      comments:[{from:'GhostRaider',text:'Thanks mate, been looking for that one for ages!'},{from:'YOU',text:'No worries, good luck out there!'}] },
+    { id:2, type:'declined', username:'ArcHunter',    gave:'Tempest Blueprint', got:null,                  time:'5h ago',
+      comments:[{from:'ArcHunter',text:'Sorry, already got one from a raid last night.'}] },
+    { id:3, type:'incoming', username:'SteelThorn',   item:'Wolfpack Blueprint', time:'Yesterday',
+      comment:"I know you've been looking for this one for ages! Got a spare. If you have any Bastion Cells I'd appreciate it — if not, don't worry, just offer anything, happy to help a fellow raider out 🤝" },
+    { id:4, type:'accepted', username:'NightCrawler', gave:'Rubber Duck',       got:'Music Box',           time:'2 days ago',
+      comments:[{from:'YOU',text:'Swap?'},{from:'NightCrawler',text:'Deal! You lifesaver, needed that Rubber Duck for Scrappy 😄'}] },
   ]);
 
   useEffect(function(){
@@ -568,7 +574,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
       if (accepted) {
         setTradeView('lobby');
         setTradeWaiting(false);
-        var friendSnd = new Audio('assets/friend.mp3'); friendSnd.volume = 0.85; friendSnd.play().catch(function(){});
+        var friendSnd = new Audio('assets/friend.mp3'); friendSnd.volume = 1.0; friendSnd.play().catch(function(){});
       } else {
         setTradeNotifs(function(prev){
           return [{id:Date.now(),type:'declined',username:tradeFriend.username,gave:'your offer',time:'Just now'}].concat(prev);
@@ -583,8 +589,12 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
 
   useEffect(function(){
     if (tradeView !== 'lobby' || !tradeFriend) return;
+    // Don't append greeting if lobby was pre-seeded from an incoming trade notification
     var t = setTimeout(function(){
-      setTradeChatMessages(function(prev){ return prev.concat([{from:'theirs', text:'Hey! What are you looking to trade?'}]); });
+      setTradeChatMessages(function(prev){
+        if (prev.length > 0) return prev;
+        return [{from:'theirs', text:'Hey! What are you looking to trade?'}];
+      });
     }, 1000);
     return function(){ clearTimeout(t); };
   }, [tradeView, tradeFriend ? tradeFriend.id : null]);
@@ -645,16 +655,23 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
 
   useEffect(function(){
     if (!tradeMyOffer || !tradeFriend) return;
-    setTradeFriendBrowsing(true);
-    setTradeTheirOffer(null);
-    setTradeChatMessages(function(prev){ return prev.concat([{from:'theirs', text:'Let me check what I have...'}]); });
+    // If their offer is already pre-filled from an incoming notification, skip the browse cycle
+    setTradeTheirOffer(function(existing){
+      if (existing) return existing;
+      setTradeFriendBrowsing(true);
+      setTradeChatMessages(function(prev){ return prev.concat([{from:'theirs', text:'Let me check what I have...'}]); });
+      return null;
+    });
     var t = setTimeout(function(){
-      var match = getMatchingOffer(tradeMyOffer);
-      setTradeTheirOffer(match || null);
-      setTradeFriendBrowsing(false);
-      if (match) {
-        setTradeChatMessages(function(prev){ return prev.concat([{from:'theirs', text:'How about a ' + match.name + ' for that?'}]); });
-      }
+      setTradeTheirOffer(function(existing){
+        if (existing) { setTradeFriendBrowsing(false); return existing; }
+        var match = getMatchingOffer(tradeMyOffer);
+        setTradeFriendBrowsing(false);
+        if (match) {
+          setTradeChatMessages(function(prev){ return prev.concat([{from:'theirs', text:'How about a ' + match.name + ' for that?'}]); });
+        }
+        return match || null;
+      });
     }, 2800);
     return function(){ clearTimeout(t); };
   }, [tradeMyOffer ? tradeMyOffer.id : null]);
@@ -1824,14 +1841,14 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .dot-offline { background:#374151; }
       .lobby-join-msg { background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.22); border-radius:8px; padding:9px 14px; margin-bottom:14px; font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:#10B981; letter-spacing:0.5px; text-align:center; }
       .trade-slots-row { display:flex; gap:10px; margin-bottom:14px; align-items:stretch; }
-      .trade-slot { flex:1; background:rgba(12,17,25,0.9); border:1.5px dashed rgba(55,65,81,0.45); border-radius:12px; padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:7px; min-height:140px; }
+      .trade-slot { flex:1; background:rgba(12,17,25,0.9); border:1.5px dashed rgba(55,65,81,0.45); border-radius:12px; padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; min-height:160px; }
       .trade-slot.has-item { border-color:rgba(245,158,11,0.4); border-style:solid; }
       .trade-slot.their-slot { border-color:rgba(16,185,129,0.25); }
       .trade-slot.their-slot.has-item { border-color:rgba(16,185,129,0.45); border-style:solid; }
       .trade-slot-label { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:2px; color:#4B5563; }
       .trade-slot-label.mine { color:#F59E0B; }
       .trade-slot-label.theirs { color:#10B981; }
-      .trade-slot-img { width:64px; height:64px; border-radius:6px; overflow:hidden; background:rgba(15,20,28,0.8); }
+      .trade-slot-img { width:82px; height:82px; border-radius:8px; overflow:hidden; background:rgba(15,20,28,0.8); }
       .trade-slot-name { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:600; color:#E5E7EB; text-align:center; line-height:1.2; }
       .trade-slot-empty { font-family:'Rajdhani',sans-serif; font-size:0.68rem; color:#374151; letter-spacing:1px; text-align:center; flex:1; display:flex; align-items:center; }
       .trade-pick-btn { width:100%; padding:7px; background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.25); border-radius:7px; color:#F59E0B; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:1px; cursor:pointer; }
@@ -1862,16 +1879,16 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-success-sub { font-family:'Rajdhani',sans-serif; font-size:0.8rem; color:#6B7280; letter-spacing:0.5px; margin-bottom:18px; }
       .trade-success-items { display:flex; gap:14px; justify-content:center; align-items:center; margin-bottom:20px; }
       .trade-success-item { display:flex; flex-direction:column; align-items:center; gap:5px; }
-      .trade-success-item-img { width:58px; height:58px; border-radius:8px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
+      .trade-success-item-img { width:72px; height:72px; border-radius:10px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
       .trade-success-item-lbl { font-family:'Rajdhani',sans-serif; font-size:0.6rem; color:#6B7280; letter-spacing:1px; }
       .trade-success-arrow { font-family:'Orbitron',sans-serif; font-size:1.2rem; color:#10B981; }
       .trade-success-more { width:100%; padding:12px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.32); border-radius:8px; color:#10B981; font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:1.5px; cursor:pointer; margin-bottom:7px; }
       .trade-success-leave { width:100%; padding:12px; background:transparent; border:1px solid rgba(55,65,81,0.35); border-radius:8px; color:#6B7280; font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:1.5px; cursor:pointer; }
       .trade-notif { display:flex; gap:10px; align-items:flex-start; background:rgba(12,17,25,0.85); border-radius:9px; padding:10px 12px; margin-bottom:7px; border-left:3px solid; }
-      .trade-notif.accepted { border-color:#10B981; }
-      .trade-notif.declined { border-color:#EF4444; }
-      .trade-notif.pending  { border-color:#F59E0B; }
-      .trade-notif.incoming { border-color:#60A5FA; }
+      .trade-notif.accepted { border-color:#F59E0B; background:rgba(16,12,4,0.88); }
+      .trade-notif.declined { border-color:#EF4444; background:rgba(16,6,6,0.88); }
+      .trade-notif.pending  { border-color:#60A5FA; background:rgba(4,10,22,0.88); }
+      .trade-notif.incoming { border-color:#60A5FA; background:rgba(4,10,22,0.88); }
       .trade-notif-icon { font-size:1rem; line-height:1; flex-shrink:0; margin-top:1px; }
       .trade-notif-body { flex:1; }
       .trade-notif-title { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; color:#E5E7EB; line-height:1.3; }
@@ -1879,20 +1896,27 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-notif-time  { font-family:'Rajdhani',sans-serif; font-size:0.6rem; color:#374151; letter-spacing:1px; flex-shrink:0; }
       .trade-notif { cursor:pointer; transition:background 0.15s; }
       .trade-notif:active { background:rgba(20,28,40,0.95); }
-      .trade-notif.accepted { animation:tradePulse 2.5s ease-in-out infinite; }
-      @keyframes tradePulse { 0%,100% { box-shadow:0 0 0 0 transparent, inset 0 0 0 0 transparent; border-left-color:#10B981; } 50% { box-shadow:0 0 14px rgba(245,158,11,0.22); border-left-color:#F59E0B; } }
-      .trade-notif-expand { padding:12px 12px 4px; border-top:1px solid rgba(30,42,58,0.8); margin-top:8px; }
-      .trade-swap-row { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:10px; }
-      .trade-swap-item { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
-      .trade-swap-img  { width:52px; height:52px; border-radius:7px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
+      .trade-notif-expand { padding:12px 12px 4px; margin-top:8px; border-top:1px solid rgba(30,42,58,0.8); }
+      .trade-swap-row { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:14px; }
+      .trade-swap-item { display:flex; flex-direction:column; align-items:center; gap:4px; width:110px; }
+      .trade-swap-img  { width:62px; height:62px; border-radius:8px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
       .trade-swap-lbl  { font-family:'Rajdhani',sans-serif; font-size:0.58rem; color:#6B7280; letter-spacing:1px; }
       .trade-swap-name { font-family:'Rajdhani',sans-serif; font-size:0.68rem; fontWeight:600; color:#E5E7EB; text-align:center; line-height:1.2; max-width:80px; }
-      .trade-swap-arrow{ font-family:'Orbitron',sans-serif; font-size:1.2rem; color:#10B981; flex-shrink:0; }
+      .trade-swap-arrow{ font-family:'Orbitron',sans-serif; font-size:1.2rem; color:#10B981; width:44px; text-align:center; flex-shrink:0; }
       .trade-notif-btn { padding:7px 14px; border-radius:7px; font-family:'Rajdhani',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:1.5px; cursor:pointer; border:1px solid; transition:all 0.15s; }
       .trade-notif-btn.green  { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.35); color:#10B981; }
       .trade-notif-btn.red    { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.3); color:#EF4444; }
       .trade-notif-btn.amber  { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.35); color:#F59E0B; }
       .trade-notif-btn.ghost  { background:transparent; border-color:rgba(55,65,81,0.3); color:#6B7280; }
+      .trade-comment-box { background:rgba(8,12,20,0.8); border:1px solid rgba(40,55,75,0.6); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+      .trade-comment-msg { font-family:'Rajdhani',sans-serif; font-size:0.75rem; line-height:1.5; margin-bottom:4px; }
+      .trade-comment-name-you    { color:#F59E0B; font-weight:700; margin-right:5px; }
+      .trade-comment-name-theirs { color:#10B981; font-weight:700; margin-right:5px; }
+      .trade-comment-text        { color:#C9D1DC; }
+      .trade-incoming-msg { background:rgba(96,165,250,0.06); border:1px solid rgba(96,165,250,0.18); border-radius:8px; padding:10px 12px; margin-bottom:10px; font-family:'Rajdhani',sans-serif; font-size:0.75rem; color:#C9D1DC; line-height:1.6; }
+      .trade-incoming-from { color:#60A5FA; font-weight:700; font-size:0.68rem; letter-spacing:1px; margin-bottom:4px; }
+      .trade-offline-comment-area { width:100%; background:rgba(8,12,20,0.7); border:1px solid rgba(40,55,75,0.5); border-radius:8px; padding:10px 12px; font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:#E5E7EB; resize:none; outline:none; box-sizing:border-box; line-height:1.5; }
+      .trade-offline-comment-area::placeholder { color:#374151; }
       .trade-waiting-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; gap:14px; text-align:center; }
       .trade-waiting-pulse { font-family:'Orbitron',sans-serif; font-size:2rem; color:#F59E0B; animation:raiderpulse 1.4s ease infinite; letter-spacing:4px; }
       .trade-offline-screen { padding:0 0 16px; }
@@ -2650,7 +2674,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                      var offItem  = n.item ? (INVENTORY_DB ? INVENTORY_DB.find(function(i){ return i.name === n.item; }) : null) : null;
                      return (
                        <div key={n.id} className={'trade-notif '+n.type}
-                         style={{flexDirection:'column',padding:'10px 12px'}}
+                         style={{flexDirection:'column',padding:'10px 12px',alignItems:'stretch'}}
                          onClick={function(){ setTradeExpandedNotif(isExpanded ? null : n.id); }}>
                          <div style={{display:'flex',alignItems:'flex-start',gap:'10px',width:'100%'}}>
                            <div className="trade-notif-icon">
@@ -2698,10 +2722,22 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                                      <div className="trade-swap-name">{n.got}</div>
                                    </div>
                                  </div>
-                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+                                 {n.comments && n.comments.length > 0 && (
+                                   <div className="trade-comment-box">
+                                     {n.comments.map(function(c,ci){
+                                       return (
+                                         <div key={ci} className="trade-comment-msg">
+                                           <span className={c.from==='YOU'?'trade-comment-name-you':'trade-comment-name-theirs'}>{c.from}:</span>
+                                           <span className="trade-comment-text">{c.text}</span>
+                                         </div>
+                                       );
+                                     })}
+                                   </div>
+                                 )}
+                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',paddingBottom:'4px'}}>
                                    <button className="trade-notif-btn amber" onClick={function(){
                                      var f = TRADE_FRIENDS.find(function(fr){ return fr.username === n.username; });
-                                     if (f) { setTradeFriend(f); setTradeView('offline'); setTradeOfflineOffer(null); }
+                                     if (f) { setTradeFriend(f); setTradeView('offline'); setTradeOfflineOffer(null); setTradeOfflineComment(''); }
                                    }}>TRADE AGAIN</button>
                                    <button className="trade-notif-btn ghost" onClick={function(){ setTradeNotifs(function(prev){ return prev.filter(function(x){ return x.id !== n.id; }); }); }}>DISMISS</button>
                                  </div>
@@ -2713,7 +2749,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',lineHeight:1.5,marginBottom:'10px'}}>
                                    {n.username} declined your offer of <span style={{color:'#E5E7EB',fontWeight:700}}>{n.gave}</span>. Try offering something of similar or higher value.
                                  </div>
-                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',paddingBottom:'4px'}}>
                                    <button className="trade-notif-btn amber" onClick={function(){
                                      var f = TRADE_FRIENDS.find(function(fr){ return fr.username === n.username; });
                                      if (f) {
@@ -2731,10 +2767,18 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
                              {n.type === 'pending' && (
                                <>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',lineHeight:1.5,marginBottom:'10px'}}>
+                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',lineHeight:1.5,marginBottom:'8px',paddingLeft:'12px',paddingRight:'12px'}}>
                                    Your offer of <span style={{color:'#E5E7EB',fontWeight:700}}>{n.gave}</span> is waiting for {n.username} to come online and respond.
                                  </div>
-                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+                                 {n.comment && (
+                                   <div className="trade-comment-box" style={{marginBottom:'8px'}}>
+                                     <div className="trade-comment-msg">
+                                       <span className="trade-comment-name-you">YOU: </span>
+                                       <span className="trade-comment-text">{n.comment}</span>
+                                     </div>
+                                   </div>
+                                 )}
+                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',paddingBottom:'4px'}}>
                                    <button className="trade-notif-btn red" onClick={function(){ setTradeNotifs(function(prev){ return prev.filter(function(x){ return x.id !== n.id; }); }); setTradesUsedToday(function(p){ return Math.max(0,p-1); }); }}>CANCEL OFFER</button>
                                  </div>
                                </>
@@ -2759,13 +2803,31 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                                      <div className="trade-swap-name" style={{color:'#6B7280'}}>To negotiate</div>
                                    </div>
                                  </div>
-                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+                                 {n.comment && (
+                                   <div className="trade-incoming-msg">
+                                     <div className="trade-incoming-from">{n.username}:</div>
+                                     {n.comment}
+                                   </div>
+                                 )}
+                                 <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',paddingBottom:'4px'}}>
                                    <button className="trade-notif-btn green" onClick={function(){
                                      var f = TRADE_FRIENDS.find(function(fr){ return fr.username === n.username; });
                                      if (f) {
                                        setTradeFriend(f);
-                                       setTradeView('waiting');
-                                       setTradeWaiting(true);
+                                       var preOffer = INVENTORY_DB ? INVENTORY_DB.find(function(i){ return i.name === n.item; }) : null;
+                                       setTradeTheirOffer(preOffer || null);
+                                       if (n.comment) {
+                                         setTradeChatMessages([{from:'theirs', text:n.comment}]);
+                                       } else {
+                                         setTradeChatMessages([]);
+                                       }
+                                       setTradeMyOffer(null);
+                                       setTradeMyConfirmed(false);
+                                       setTradeSuccess(false);
+                                       setTradePickingCat(null);
+                                       setTradeFriendBrowsing(false);
+                                       setTradeDropdown(null);
+                                       setTradeView('lobby');
                                        setTradeNotifs(function(prev){ return prev.filter(function(x){ return x.id !== n.id; }); });
                                      }
                                    }}>ACCEPT</button>
@@ -2890,16 +2952,28 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                    </>
                  )}
                </div>
+               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#4B5563',letterSpacing:'2px',marginBottom:'6px',marginTop:'4px'}}>LEAVE A MESSAGE <span style={{color:'#374151',fontWeight:400}}>(OPTIONAL)</span></div>
+               <textarea className="trade-offline-comment-area" rows={3}
+                 placeholder={"e.g. Got a spare — offer anything, happy to help out!"}
+                 value={tradeOfflineComment}
+                 onChange={function(e){ setTradeOfflineComment(e.target.value); }}
+                 style={{marginBottom:'12px'}} />
                <button className="trade-confirm-btn" disabled={!tradeOfflineOffer}
                  style={{marginBottom:'8px'}}
                  onClick={function(){
                    setTradeNotifs(function(prev){
-                     return [{id:Date.now(),type:'pending',username:tradeFriend.username,gave:tradeOfflineOffer.name,time:'Just now'}].concat(prev);
+                     return [{id:Date.now(),type:'pending',username:tradeFriend.username,gave:tradeOfflineOffer.name,comment:tradeOfflineComment.trim()||null,time:'Just now'}].concat(prev);
                    });
                    setTradesUsedToday(function(p){ return p+1; });
+                   var sentTo = tradeFriend.username;
+                   var sentItem = tradeOfflineOffer.name;
                    setTradeView('friends');
                    setTradeFriend(null);
                    setTradeOfflineOffer(null);
+                   setTradeOfflineComment('');
+                   setTradeOfferSentToast({username:sentTo, item:sentItem});
+                   var snd = new Audio('assets/friend.mp3'); snd.volume=1.0; snd.play().catch(function(){});
+                   setTimeout(function(){ setTradeOfferSentToast(null); }, 3500);
                  }}>
                  SEND TRADE OFFER
                </button>
@@ -2927,7 +3001,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                  ⚡ {tradeFriend.username} joined the trade lobby
                </div>
 
-               <div className="trade-slots-row">
+               <div className="trade-slots-row" style={{justifyContent:'center'}}>
                  <div className={'trade-slot'+(tradeMyOffer?' has-item':'')}>
                    <div className="trade-slot-label mine">YOUR OFFER</div>
                    {tradeMyOffer ? (
@@ -3076,6 +3150,37 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
        )}
 
       </div>
+
+      {(function(){
+        if (!tradeOfferSentToast) return null;
+        var sentItem = INVENTORY_DB ? INVENTORY_DB.find(function(i){ return i.name === tradeOfferSentToast.item; }) : null;
+        return (
+          <div className="trade-success-overlay" style={{zIndex:9000}}>
+            <div className="trade-success-card" style={{borderColor:'rgba(96,165,250,0.38)',boxShadow:'0 0 60px rgba(96,165,250,0.12)'}}>
+              <div className="trade-success-icon" style={{color:'#60A5FA'}}>✉</div>
+              <div className="trade-success-title" style={{color:'#60A5FA',fontSize:'0.85rem'}}>OFFER SENT</div>
+              <div className="trade-success-sub">Trade request delivered to {tradeOfferSentToast.username}</div>
+              <div className="trade-success-items" style={{justifyContent:'center',marginBottom:'16px'}}>
+                <div className="trade-success-item">
+                  <div className="trade-success-item-img">
+                    {sentItem && <img src={'assets/items/'+sentItem.icon+'.png'} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                  </div>
+                  <div className="trade-success-item-lbl">YOUR OFFER</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#9CA3AF',textAlign:'center',maxWidth:'80px',lineHeight:1.2}}>{tradeOfferSentToast.item}</div>
+                </div>
+              </div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#6B7280',letterSpacing:'0.5px',marginBottom:'20px',lineHeight:1.5}}>
+                {tradeOfferSentToast.username} will be notified when they log in.<br/>You'll get a notification when they respond.
+              </div>
+              <button className="trade-success-more"
+                style={{background:'rgba(96,165,250,0.1)',borderColor:'rgba(96,165,250,0.32)',color:'#60A5FA'}}
+                onClick={function(){ setTradeOfferSentToast(null); }}>
+                BACK TO FRIENDS
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {activeTab === 'INVENTORY' && (
        <div className="footer">
