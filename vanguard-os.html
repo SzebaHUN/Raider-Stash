@@ -3287,7 +3287,111 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         );
       })()}
 
-      {activeTab === 'INVENTORY' && (
+      {activeTab === 'EVENTS' && (
+         <div style={{paddingBottom:'80px'}}>
+           <div style={{marginBottom:'14px'}}>
+             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'3px'}}>LIVE EVENTS</div>
+             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#6B7280',letterSpacing:'1px'}}>DATA · METAFORGE.APP</div>
+           </div>
+           {eventsLoading && (
+             <div style={{textAlign:'center',padding:'40px 0',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.8rem',color:'#4B5563',letterSpacing:'1px',animation:'raiderpulse 1.5s ease infinite'}}>
+               LOADING EVENTS…
+             </div>
+           )}
+           {eventsError && eventsError !== 'demo' && (
+             <div style={{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:'9px',padding:'14px 16px',marginBottom:'14px'}}>
+               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#EF4444',marginBottom:'6px'}}>Could not load live events</div>
+               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',lineHeight:1.5}}>View live events at:</div>
+               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#60A5FA',marginTop:'4px'}}>metaforge.app/arc-raiders/event-timers</div>
+               <button onClick={function(){ setEventsLastFetch(0); setEventsData([]); setActiveTab('RAIDER'); setTimeout(function(){ setActiveTab('EVENTS'); },50); }}
+                 style={{marginTop:'10px',padding:'7px 14px',background:'transparent',border:'1px solid rgba(55,65,81,0.35)',borderRadius:'7px',color:'#6B7280',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>
+                 RETRY
+               </button>
+             </div>
+           )}
+           {!eventsLoading && eventsData.length > 0 && (function(){
+             var filtered = eventsFilter === 'ALL' ? eventsData : eventsData.filter(function(ev){
+               return ((ev.map || ev.maps || '')+'').indexOf(eventsFilter) !== -1;
+             });
+             var active   = filtered.filter(function(ev){ return ev.active || ev.status === 'active'; });
+             var upcoming = filtered.filter(function(ev){ return !ev.active && ev.status !== 'active'; });
+             var maps = ['ALL'];
+             eventsData.forEach(function(ev){
+               ((ev.map || ev.maps || '')+'').split(',').forEach(function(p){
+                 var pp = p.trim(); if (pp && maps.indexOf(pp) === -1) maps.push(pp);
+               });
+             });
+             return (
+               <>
+                 {eventsError === 'demo' && (
+                   <div style={{background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.18)',borderRadius:'7px',padding:'8px 12px',marginBottom:'12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#6B7280',letterSpacing:'0.5px'}}>
+                     DEMO MODE · Push to GitHub Pages for live data
+                   </div>
+                 )}
+                 <div className="events-filter-row">
+                   {maps.map(function(m){
+                     return (
+                       <button key={m} className={'events-filter-btn'+(eventsFilter===m?' active':'')}
+                         onClick={function(){ setEventsFilter(m); }}>{m}</button>
+                     );
+                   })}
+                 </div>
+                 {active.length > 0 && <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#10B981',letterSpacing:'2px',marginBottom:'8px'}}>● ACTIVE NOW</div>}
+                 {active.map(function(ev, i){
+                   return (
+                     <div key={i} className="event-card active-event">
+                       <div className="event-card-header">
+                         <div className="event-status-badge active">ACTIVE</div>
+                         <div className="event-name">{ev.name || ev.title}</div>
+                       </div>
+                       <div style={{padding:'0 14px 6px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',letterSpacing:'1.5px'}}>{ev.map || ev.maps || ''}</div>
+                       {ev.instances && ev.instances.length > 0 && (
+                         <div className="event-instances">
+                           {ev.instances.slice(0,5).map(function(inst,ii){
+                             return (
+                               <div key={ii} className={'event-instance-row'+(inst.active?' active-slot':'')}>
+                                 <span className="event-instance-time">{inst.time || inst.startTime || ''}</span>
+                                 <span className="event-instance-cd">{inst.countdown || inst.timeUntil || ''}</span>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
+                 {upcoming.length > 0 && <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'8px',marginTop:'6px'}}>⏱ UPCOMING</div>}
+                 {upcoming.map(function(ev, i){
+                   return (
+                     <div key={i} className="event-card">
+                       <div className="event-card-header">
+                         <div className="event-status-badge upcoming">UPCOMING</div>
+                         <div className="event-name">{ev.name || ev.title}</div>
+                       </div>
+                       <div style={{padding:'0 14px 6px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',letterSpacing:'1.5px'}}>{ev.map || ev.maps || ''}</div>
+                       {ev.instances && ev.instances.length > 0 && (
+                         <div className="event-instances">
+                           {ev.instances.slice(0,4).map(function(inst,ii){
+                             return (
+                               <div key={ii} className="event-instance-row">
+                                 <span className="event-instance-time">{inst.time || inst.startTime || ''}</span>
+                                 <span className="event-instance-cd">{inst.countdown || inst.timeUntil || ''}</span>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
+                 <div className="events-attribution">Event data from metaforge.app/arc-raiders 🙏</div>
+               </>
+             );
+           })()}
+         </div>
+       )}
+
+            {activeTab === 'INVENTORY' && (
        <div className="footer">
          <div className={`weight-display ${parseFloat(calculateWeight()) > 40 ? 'overweight' : ''}`}>
           LOAD: {calculateWeight()}kg / 40kg
