@@ -462,6 +462,8 @@
     #side-right{position:fixed;top:0;right:0;width:calc((100vw - 480px)/2);height:100%;background:#000;z-index:1;}
     #root{position:relative;z-index:2;}
     #error-display{display:none;position:fixed;top:0;left:0;right:0;background:#c00;color:#fff;padding:12px 14px;font-size:11px;z-index:9999;white-space:pre-wrap;word-break:break-all;max-height:50vh;overflow-y:auto;}
+    .main-content{padding-top:0px!important;}
+    .container.events-active .main-content{margin-top:-60px;}
   </style>
 </head>
 <body>
@@ -614,6 +616,20 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [eventsReminder, setEventsReminder] = useState(null);
   const [eventsAcceptSuccess, setEventsAcceptSuccess] = useState(null);
   const eventsReminderShown = React.useRef(false);
+  const eventsBuiltCache = React.useRef([]);
+
+  useEffect(function(){
+    var el = document.querySelector('.container');
+    if (!el) return;
+    if (activeTab === 'EVENTS') {
+      el.classList.add('events-active');
+    } else {
+      el.classList.remove('events-active');
+    }
+  }, [activeTab]);
+  const eventsSecondsRef = React.useRef(0);
+
+
   const [eventsCancelTarget, setEventsCancelTarget] = useState(null);
   const [eventsCancelMsg, setEventsCancelMsg] = useState('');
   const [eventsCancelSuccess, setEventsCancelSuccess] = useState(null);
@@ -819,14 +835,25 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
 
   useEffect(function(){
     if (activeTab !== 'EVENTS') return;
-    var iv = setInterval(function(){ setEventsTick(function(t){ return t+1; }); }, 1000);
+    // Full data refresh every 60s
+    var iv = setInterval(function(){ setEventsTick(function(t){ return t+1; }); }, 60000);
+    // Fake seconds counter — updates DOM directly every 1s (no React re-render)
+    var siv = setInterval(function(){
+      eventsSecondsRef.current = (eventsSecondsRef.current + 1) % 60;
+      var els = document.querySelectorAll('[data-ev-sec]');
+      for (var i=0; i<els.length; i++){
+        var base = parseInt(els[i].getAttribute('data-ev-sec'),10)||0;
+        var s = Math.max(0, base - eventsSecondsRef.current);
+        els[i].textContent = s+'s';
+      }
+    }, 1000);
     if (!eventsReminderShown.current) {
       eventsReminderShown.current = true;
       setTimeout(function(){
         setEventsReminder({username:'GhostRaider', event:'Night Raid', map:'Stella Montis', time:'19:00'});
       }, 600);
     }
-    return function(){ clearInterval(iv); };
+    return function(){ clearInterval(iv); clearInterval(siv); };
   }, [activeTab]);
 
   const [loadout, setLoadout] = useState({ augment: null,
@@ -1335,7 +1362,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       white-space: nowrap; }
 .nav-tab.active { background: rgba(245,158,11,0.08); color: #F59E0B; border-color: transparent; border-bottom: 2px solid #F59E0B; font-weight: 700; }
 .nav-tab:active { transform: scale(0.98); }
-.main-content { flex: 1; padding: 16px; padding-bottom: 72px; overflow-y: auto; } .main-content-events { padding-top: 6px !important; }
+.main-content { flex: 1; padding: 4px 16px 72px; overflow-y: auto; }
       .section-title { font-family: 'Rajdhani', sans-serif;
       font-size: 0.72rem;
       font-weight: 700;
@@ -3357,41 +3384,42 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         );
       })()}
 
-      {activeTab === 'EVENTS' && (function(){
-         var allCards = buildEventsDisplay(eventsRawRef.current);
-         var active   = allCards.filter(function(c){ return c.active; });
-         var upcoming = allCards.filter(function(c){ return !c.active && c.diff > 0; });
-         var soon     = upcoming.filter(function(c){ return c.diff < 3600000; });
-         var allMaps  = ['ALL MAPS'];
-         allCards.forEach(function(c){ if(c.map && allMaps.indexOf(c.map)===-1) allMaps.push(c.map); });
-         var filtered   = eventsFilter==='ALL MAPS' ? upcoming : upcoming.filter(function(c){ return c.map===eventsFilter; });
-         var filtActive = eventsFilter==='ALL MAPS' ? active   : active.filter(function(c){ return c.map===eventsFilter; });
-
-         var attendBase = Math.ceil(Date.now()/3600000)*3600000;
-         var attend = attendList.map(function(a, idx){
-           var hours = [1,6,14];
-           return Object.assign({}, a, {startTime: attendBase + hours[idx%3]*3600000});
-         });
-         var fmtTime = function(ms){ var d=new Date(ms); var h=d.getHours(),m=d.getMinutes(); return (h<10?'0'+h:h)+':'+(m<10?'0'+m:m); };
-         var cdFull = function(ms){
-           if(ms<=0) return 'NOW';
-           var s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),rm=m%60,rs=s%60;
-           return h>0 ? h+'h '+rm+'m '+rs+'s' : m>0 ? rm+'m '+rs+'s' : rs+'s';
-         };
-
-         return (
-           <div style={{paddingBottom:'80px',paddingLeft:'10px',paddingRight:'10px',paddingTop:'6px',marginTop:'-16px',marginLeft:'-16px',marginRight:'-16px'}}>
+      {activeTab === 'EVENTS' && (function eventsTab(){
+        const allCards = buildEventsDisplay(eventsRawRef.current);
+        const active   = allCards.filter(c => c.active);
+        const upcoming = allCards.filter(c => !c.active && c.diff > 0);
+        const soon     = upcoming.filter(c => c.diff < 3600000);
+        const allMaps  = ['ALL MAPS'];
+        allCards.forEach(c => { if(c.map && allMaps.indexOf(c.map)===-1) allMaps.push(c.map); });
+        const filtered   = eventsFilter==='ALL MAPS' ? upcoming : upcoming.filter(c => c.map===eventsFilter);
+        const filtActive = eventsFilter==='ALL MAPS' ? active   : active.filter(c => c.map===eventsFilter);
+        const attendBase = Math.ceil(Date.now()/3600000)*3600000;
+        const attend = attendList.map((a, idx) => ({...a, startTime: attendBase + [1,6,14][idx%3]*3600000}));
+        const fmtTime = ms => { const d=new Date(ms),h=d.getHours(),m=d.getMinutes(); return (h<10?'0'+h:h)+':'+(m<10?'0'+m:m); };
+        const cdFull = (ms, raw) => {
+          if(ms<=0) return 'NOW';
+          const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),rm=m%60,rs=s%60;
+          if (raw) return {h,rm,rs}; // for data-ev-sec
+          return h>0 ? h+'h '+rm+'m '+rs+'s' : m>0 ? rm+'m '+rs+'s' : rs+'s';
+        };
+        const cdJSX = (ms) => {
+          if(ms<=0) return <span>NOW</span>;
+          const r = cdFull(ms, true);
+          const mins = r.h>0 ? r.h+'h '+r.rm+'m' : r.rm+'m';
+          return <span>{mins} <span data-ev-sec={r.rs}>{r.rs}s</span></span>;
+        };
+        return (
+          <div style={{paddingBottom:'80px'}}>
 
              {/* Header */}
-             <div style={{marginBottom:'12px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
+             <div style={{marginBottom:'8px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
                <div>
                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',letterSpacing:'3px',marginBottom:'3px'}}>LIVE EVENTS</div>
-                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#9CA3AF',letterSpacing:'1px',fontWeight:600}}>DATA · METAFORGE.APP</div>
+
                </div>
-               {eventsLastFetch>0 && <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color: eventsError==='demo'?'#6B7280':'#10B981',letterSpacing:'1px',fontWeight:700,border:'1px solid',borderColor: eventsError==='demo'?'rgba(55,65,81,0.4)':'rgba(16,185,129,0.35)',padding:'2px 8px',borderRadius:'4px'}}>{eventsError==='demo'?'DEMO':'LIVE'}</div>}
+               {eventsLastFetch>0 && <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color: eventsError==='demo'?'#6B7280':'#10B981',letterSpacing:'1px',fontWeight:700,border:'1px solid',borderColor: eventsError==='demo'?'rgba(55,65,81,0.4)':'rgba(16,185,129,0.35)',padding:'2px 8px',borderRadius:'4px'}}>{eventsError==='demo'?'DEMO · EST':'LIVE'}</div>}
              </div>
 
-             {eventsError==='demo' && <div style={{background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.15)',borderRadius:'5px',padding:'5px 10px',marginBottom:'10px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#9CA3AF',fontWeight:600}}>DEMO MODE · Estimated data</div>}
 
              {/* ── Notifications Bar ── */}
              <div className="ev-section-bar" onClick={function(){ setEventsNotifsOpen(!eventsNotifsOpen); }} style={{marginBottom: eventsNotifsOpen?'0':'8px'}}>
@@ -3488,7 +3516,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                          </div>
                          <div style={{textAlign:'right',flexShrink:0}}>
                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.72rem',color:col,fontWeight:700,marginBottom:'3px'}}>{fmtTime(a.startTime)}</div>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:col,opacity:0.85,fontWeight:600}}>{cdFull(diff)}</div>
+                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:col,opacity:0.85,fontWeight:600}}>{cdJSX(diff)}</div>
                          </div>
                        </div>
                        <div style={{marginTop:'8px',display:'flex',justifyContent:'flex-end'}}>
@@ -3524,7 +3552,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                            </div>
                          </div>
                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {ev.countdown}</div>
+                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {cdJSX(ev.diff<0?ev.endTime-Date.now():ev.diff)}</div>
                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                          </div>
                        </div>
@@ -3555,7 +3583,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                            </div>
                          </div>
                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{ev.countdown}</div>
+                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{cdJSX(ev.diff)}</div>
                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                          </div>
                        </div>
@@ -3584,7 +3612,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',marginTop:'1px',fontWeight:600}}>{ev.map}</div>
                      </div>
                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px',flexShrink:0}}>
-                       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{ev.countdown}</div>
+                       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{cdJSX(ev.diff)}</div>
                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                      </div>
                    </div>
@@ -3598,7 +3626,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                );
              })}
 
-             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#2D3748',textAlign:'center',padding:'10px'}}>Data · metaforge.app/arc-raiders 🙏</div>
+
 
              {/* ── Invite Modal ── */}
              {eventsInviteTarget && (function(){
