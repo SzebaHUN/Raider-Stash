@@ -728,7 +728,6 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     if (activeTab !== 'EVENTS') return;
     var now = Date.now();
     if (now - eventsLastFetch < 60000 && eventsData.length > 0) return;
-    setEventsLoading(true);
     setEventsError(null);
 
     var loadDemoEvents = function() {
@@ -749,13 +748,15 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
         mk('Cold Snap','Dam','coldsnap',8,0), mk('Cold Snap','Spaceport','coldsnap',8,0),
       ]);
       setEventsLastFetch(Date.now());
-      setEventsLoading(false);
       setEventsError('demo');
     };
-    if (window.location.protocol === 'file:') { loadDemoEvents(); return; }
+    // Always show demo data instantly so tab is never blank
+    loadDemoEvents();
 
-    var target = 'https://metaforge.app/api/arc-raiders/events-schedule';
-    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(target);
+    if (window.location.protocol === 'file:') { return; }
+
+    var target = 'https://plain-tooth-2482sebstreams.sebstreams88.workers.dev/';
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://metaforge.app/api/arc-raiders/events-schedule');
 
     // Fast fetch with 5s timeout via AbortController
     var fetchFast = function(url, isProxy) {
@@ -769,16 +770,17 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
           if (!arr || arr.length === 0) throw new Error('empty');
           setEventsRaw(arr);
           setEventsLastFetch(Date.now());
-          setEventsLoading(false);
+          setEventsError(null);  // clear demo flag when live data arrives
         });
     };
 
     fetchFast(target, false)
       .catch(function() {
-        return fetchFast(proxyUrl, true);
+        return fetchFast(proxyUrl, true); // fallback if worker goes down
       })
       .catch(function() {
-        loadDemoEvents();
+        // Only mark as demo if we never got live data
+        setEventsError(function(prev){ return prev === null ? 'demo' : prev; });
       });
   }, [activeTab]);
 
@@ -3330,7 +3332,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
              var soon = upcoming.filter(function(e){ return e.nextDiff < 3600000; });
              var later = upcoming.filter(function(e){ return !e.nextDiff || e.nextDiff >= 3600000; });
              var allMaps = ['ALL MAPS'];
-             eventsData.forEach(function(e){ e.maps.forEach(function(m){ if(m&&allMaps.indexOf(m)===-1) allMaps.push(m); }); });
+             eventsData.forEach(function(e){ (e.maps||[]).forEach(function(m){ var mu=m.trim(); if(mu&&allMaps.indexOf(mu)===-1) allMaps.push(mu); }); });
              var mapOk = function(e){ return eventsFilter==='ALL MAPS' || e.maps.some(function(m){ return m.toLowerCase()===eventsFilter.toLowerCase(); }); };
              var instOk = function(i){ return eventsFilter==='ALL MAPS' || i.map.toLowerCase()===eventsFilter.toLowerCase(); };
              var CardIcon = function(props){
