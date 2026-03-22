@@ -698,28 +698,69 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     if (now - eventsLastFetch < 60000 && eventsData.length > 0) return;
     setEventsLoading(true);
     setEventsError(null);
-    var directUrl  = 'https://metaforge.app/api/arc-raiders/events-schedule';
-    var proxyUrl   = 'https://api.allorigins.win/get?url=' + encodeURIComponent(directUrl);
-    var parseAndSet = function(raw) {
-      var data = (raw && typeof raw.contents === 'string') ? JSON.parse(raw.contents) : raw;
-      var arr = Array.isArray(data) ? data : (data.events || data.data || []);
-      if (!arr || arr.length === 0) throw new Error('empty');
-      setEventsData(arr);
+
+    var loadDemoEvents = function() {
+      var now2 = new Date();
+      var h = now2.getHours();
+      var pad = function(n){ return n < 10 ? '0'+n : ''+n; };
+      var t = function(dh, dm){ var d = new Date(now2); d.setHours(h+dh, dm, 0); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+      setEventsData([
+        { name:'Bird City',             map:'BURIED CITY',                    active:true,  status:'active',   instances:[{time:t(0,0),countdown:'NOW',active:true},{time:t(1,0),countdown:'1h 0m'},{time:t(2,0),countdown:'2h 0m'}] },
+        { name:'Hidden Bunker',         map:'SPACEPORT',                      active:true,  status:'active',   instances:[{time:t(0,15),countdown:'15m',active:true},{time:t(2,15),countdown:'2h 15m'}] },
+        { name:'Electromagnetic Storm', map:'BLUE GATE, DAM, SPACEPORT',      active:false, status:'upcoming', instances:[{time:t(1,30),countdown:'1h 30m'},{time:t(3,30),countdown:'3h 30m'},{time:t(5,30),countdown:'5h 30m'}] },
+        { name:'Hurricane',             map:'BLUE GATE',                      active:false, status:'upcoming', instances:[{time:t(0,45),countdown:'45m'},{time:t(2,45),countdown:'2h 45m'}] },
+        { name:'Lush Blooms',           map:'DAM, BURIED CITY, SPACEPORT',    active:false, status:'upcoming', instances:[{time:t(2,0),countdown:'2h 0m'},{time:t(5,0),countdown:'5h 0m'}] },
+        { name:'Matriarch',             map:'DAM, SPACEPORT',                 active:false, status:'upcoming', instances:[{time:t(1,15),countdown:'1h 15m'},{time:t(4,15),countdown:'4h 15m'}] },
+        { name:'Night Raid',            map:'BURIED CITY, SPACEPORT, BLUE GATE', active:false, status:'upcoming', instances:[{time:t(3,0),countdown:'3h 0m'},{time:t(7,0),countdown:'7h 0m'}] },
+        { name:'Cold Snap',             map:'BURIED CITY, SPACEPORT, DAM',    active:false, status:'upcoming', instances:[{time:t(4,30),countdown:'4h 30m'}] },
+        { name:'Locked Gate',           map:'BLUE GATE',                      active:false, status:'upcoming', instances:[{time:t(2,30),countdown:'2h 30m'},{time:t(6,30),countdown:'6h 30m'}] },
+      ]);
       setEventsLastFetch(Date.now());
       setEventsLoading(false);
+      setEventsError('demo');
     };
-    fetch(directUrl)
+    if (window.location.protocol === 'file:') { loadDemoEvents(); return; }
+
+    var target = 'https://metaforge.app/api/arc-raiders/events-schedule';
+    var proxies = [
+      'https://api.allorigins.win/get?url=' + encodeURIComponent(target),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(target),
+      'https://thingproxy.freeboard.io/fetch/' + target,
+    ];
+    var parseRaw = function(raw) {
+      if (raw && typeof raw.contents === 'string') return JSON.parse(raw.contents);
+      if (raw && typeof raw.body === 'string') return JSON.parse(raw.body);
+      return raw;
+    };
+    var tryProxy = function(idx) {
+      if (idx >= proxies.length) {
+        // All proxies failed — show demo data with a notice
+        loadDemoEvents();
+        return;
+      }
+      fetch(proxies[idx])
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(raw) {
+          var data = parseRaw(raw);
+          var arr = Array.isArray(data) ? data : (data.events || data.data || []);
+          if (!arr || arr.length === 0) throw new Error('empty');
+          setEventsData(arr);
+          setEventsLastFetch(Date.now());
+          setEventsLoading(false);
+        })
+        .catch(function() { tryProxy(idx + 1); });
+    };
+    // Try direct first, then proxies
+    fetch(target)
       .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(parseAndSet)
-      .catch(function() {
-        fetch(proxyUrl)
-          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-          .then(parseAndSet)
-          .catch(function() {
-            setEventsError('Could not load live events. Check metaforge.app/arc-raiders/event-timers directly.');
-            setEventsLoading(false);
-          });
-      });
+      .then(function(data) {
+        var arr = Array.isArray(data) ? data : (data.events || data.data || []);
+        if (!arr || arr.length === 0) throw new Error('empty');
+        setEventsData(arr);
+        setEventsLastFetch(Date.now());
+        setEventsLoading(false);
+      })
+      .catch(function() { tryProxy(0); });
   }, [activeTab]);
 
 
