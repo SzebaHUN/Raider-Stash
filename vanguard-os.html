@@ -556,41 +556,45 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [tradeOfflineComment, setTradeOfflineComment] = useState('');
   const [tradeOfferSentToast, setTradeOfferSentToast] = useState(null);
   const [eventsData, setEventsData] = useState([]);
+  // Store raw flat events from API — process at render time using eventsTick
+  var eventsRawRef = React.useRef([]);
   var setEventsRaw = function(rawArr) {
+    eventsRawRef.current = rawArr;
+    setEventsTick(function(t){ return t+1; }); // trigger re-render
+  };
+  // Build display data fresh each tick from raw timestamps
+  var buildEventsDisplay = function(rawArr) {
+    if (!rawArr || rawArr.length === 0) return [];
     var now = Date.now();
-    var eventMap = {};
-    rawArr.forEach(function(ev) {
-      var key = ev.name;
-      if (!eventMap[key]) eventMap[key] = {name:ev.name,icon:ev.icon,maps:[],instances:[],active:false,nextDiff:Infinity};
-      var e = eventMap[key];
+    var fmt = function(ms){ var d=new Date(ms); var hh=d.getHours(),mm=d.getMinutes(); return (hh<10?'0'+hh:hh)+':'+(mm<10?'0'+mm:mm); };
+    var cd = function(ms){
+      if(ms<=0) return 'Now';
+      var s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),rm=m%60,rs=s%60;
+      return h>0 ? h+'h '+rm+'m '+rs+'s' : m>0 ? rm+'m '+rs+'s' : rs+'s';
+    };
+    // Each flat entry becomes its own card (one card = one event on one map)
+    var cards = rawArr.map(function(ev){
       var isAct = ev.startTime <= now && now < ev.endTime;
-      if (isAct) e.active = true;
-      if (e.maps.indexOf(ev.map) === -1) e.maps.push(ev.map);
-      var fmt = function(ms){ var d=new Date(ms); var hh=d.getHours(),mm=d.getMinutes(); return (hh<10?'0'+hh:hh)+':'+(mm<10?'0'+mm:mm); };
-      var cdMs = isAct ? (ev.endTime-now) : (ev.startTime-now);
-      var cdStr = (function(ms){
-        if (ms<=0) return 'Now';
-        var m=Math.floor(ms/60000),h=Math.floor(m/60),rm=m%60;
-        return h>0 ? h+'h '+rm+'m' : rm+'m';
-      })(cdMs);
-      e.instances.push({timeRange:fmt(ev.startTime)+' – '+fmt(ev.endTime),map:ev.map,startTime:ev.startTime,endTime:ev.endTime,active:isAct,countdown:cdStr,diff:isAct?0:(ev.startTime-now)});
-      if (!isAct && (ev.startTime-now) > 0 && (ev.startTime-now) < e.nextDiff) e.nextDiff = ev.startTime-now;
+      var diff = isAct ? (ev.endTime-now) : (ev.startTime-now);
+      return {
+        name: ev.name, map: ev.map, icon: ev.icon,
+        timeRange: fmt(ev.startTime)+' – '+fmt(ev.endTime),
+        startTime: ev.startTime, endTime: ev.endTime,
+        active: isAct, diff: diff,
+        countdown: isAct ? cd(ev.endTime-now) : cd(ev.startTime-now)
+      };
     });
-    var list = Object.keys(eventMap).map(function(k){ return eventMap[k]; }).map(function(e){
-      e.instances.sort(function(a,b){return a.startTime-b.startTime;});
-      if (e.active) { var ai=e.instances.find(function(i){return i.active;}); e.endsIn=ai?ai.countdown:''; }
-      else { var ni=e.instances.find(function(i){return i.diff>0;}); e.startsIn=ni?ni.countdown:''; }
-      return e;
-    });
-    list.sort(function(a,b){
+    // Sort: active first, then by start time
+    cards.sort(function(a,b){
       if(a.active&&!b.active) return -1; if(!a.active&&b.active) return 1;
-      return (a.nextDiff||Infinity)-(b.nextDiff||Infinity);
+      return a.startTime-b.startTime;
     });
-    setEventsData(list);
+    return cards;
   };
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState(null);
-  const [eventsFilter, setEventsFilter] = useState('ALL');
+  const [eventsFilter, setEventsFilter] = useState('ALL MAPS');
+  const [eventsTick, setEventsTick] = useState(0);
   const [eventsLastFetch, setEventsLastFetch] = useState(0);
   const [tradeExpandedNotif, setTradeExpandedNotif] = useState(null);
   const [tradeNotifs, setTradeNotifs] = useState([
@@ -746,9 +750,10 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
         mk('Harvester','Blue Gate','harvester',5,0), mk('Electromagnetic Storm','Spaceport','electrical',6,0),
         mk('Electromagnetic Storm','Dam','electrical',7,0), mk('Hurricane','Buried City','hurricane',7,0),
         mk('Cold Snap','Dam','coldsnap',8,0), mk('Cold Snap','Spaceport','coldsnap',8,0),
-      ]);
+      ];
       setEventsLastFetch(Date.now());
       setEventsError('demo');
+      setEventsTick(function(t){ return t+1; });
     };
     // Always show demo data instantly so tab is never blank
     loadDemoEvents();
@@ -768,9 +773,10 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
           var data = (isProxy && raw && typeof raw.contents === 'string') ? JSON.parse(raw.contents) : raw;
           var arr = Array.isArray(data) ? data : (data.events || data.data || []);
           if (!arr || arr.length === 0) throw new Error('empty');
-          setEventsRaw(arr);
+          eventsRawRef.current = arr;
           setEventsLastFetch(Date.now());
-          setEventsError(null);  // clear demo flag when live data arrives
+          setEventsError(null);
+          setEventsTick(function(t){ return t+1; });
         });
     };
 
@@ -784,7 +790,11 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
       });
   }, [activeTab]);
 
-
+  useEffect(function(){
+    if (activeTab !== 'EVENTS') return;
+    var iv = setInterval(function(){ setEventsTick(function(t){ return t+1; }); }, 1000);
+    return function(){ clearInterval(iv); };
+  }, [activeTab]);
 
   const [loadout, setLoadout] = useState({ augment: null,
     armor: null,
@@ -3302,146 +3312,125 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         );
       })()}
 
-      {activeTab === 'EVENTS' && (
-         <div style={{paddingBottom:'80px'}}>
-           <div style={{marginBottom:'10px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
-             <div>
-               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',letterSpacing:'3px',marginBottom:'3px'}}>LIVE EVENTS</div>
-               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#4B5563',letterSpacing:'1px'}}>DATA · METAFORGE.APP</div>
+      {activeTab === 'EVENTS' && (function(){
+         var allCards = buildEventsDisplay(eventsRawRef.current);
+         var active  = allCards.filter(function(c){ return c.active; });
+         var upcoming= allCards.filter(function(c){ return !c.active && c.diff > 0; });
+         var soon    = upcoming.filter(function(c){ return c.diff < 3600000; });
+         // All maps list
+         var allMaps = ['ALL MAPS'];
+         allCards.forEach(function(c){ if(c.map && allMaps.indexOf(c.map)===-1) allMaps.push(c.map); });
+         var filtered = eventsFilter==='ALL MAPS' ? upcoming : upcoming.filter(function(c){ return c.map===eventsFilter; });
+         var filtActive = eventsFilter==='ALL MAPS' ? active : active.filter(function(c){ return c.map===eventsFilter; });
+
+         return (
+           <div style={{paddingBottom:'80px'}}>
+             <div style={{marginBottom:'12px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
+               <div>
+                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',letterSpacing:'3px',marginBottom:'2px'}}>LIVE EVENTS</div>
+                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#4B5563',letterSpacing:'1px'}}>DATA · METAFORGE.APP</div>
+               </div>
+               {eventsLastFetch>0 && <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.55rem',color: eventsError==='demo'?'#4B5563':'#10B981',letterSpacing:'1px'}}>{eventsError==='demo'?'DEMO':'LIVE'}</div>}
              </div>
-             {eventsLastFetch>0 && <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#374151',letterSpacing:'0.5px'}}>{eventsError==='demo'?'DEMO':'LIVE'}</div>}
-           </div>
 
-           {eventsLoading && (
-             <div style={{textAlign:'center',padding:'40px 0',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.8rem',color:'#4B5563',letterSpacing:'1px',animation:'raiderpulse 1.5s ease infinite'}}>SYNCING EVENTS…</div>
-           )}
+             {eventsError && eventsError !== 'demo' && (
+               <div style={{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:'8px',padding:'12px 14px',marginBottom:'12px'}}>
+                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',color:'#EF4444',marginBottom:'3px'}}>Could not reach live data</div>
+                 <button onClick={function(){ setEventsLastFetch(0); eventsRawRef.current=[]; setActiveTab('RAIDER'); setTimeout(function(){ setActiveTab('EVENTS'); },50); }}
+                   style={{marginTop:'8px',padding:'5px 12px',background:'transparent',border:'1px solid rgba(55,65,81,0.35)',borderRadius:'5px',color:'#6B7280',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>RETRY</button>
+               </div>
+             )}
 
-           {eventsError && eventsError !== 'demo' && (
-             <div style={{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:'8px',padding:'12px 14px',marginBottom:'12px'}}>
-               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',color:'#EF4444',marginBottom:'3px'}}>Could not reach live data</div>
-               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#60A5FA'}}>metaforge.app/arc-raiders/event-timers</div>
-               <button onClick={function(){ setEventsLastFetch(0); setEventsData([]); setActiveTab('RAIDER'); setTimeout(function(){ setActiveTab('EVENTS'); },50); }}
-                 style={{marginTop:'8px',padding:'5px 12px',background:'transparent',border:'1px solid rgba(55,65,81,0.35)',borderRadius:'5px',color:'#6B7280',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>RETRY</button>
-             </div>
-           )}
+             {eventsError==='demo' && <div style={{background:'rgba(245,158,11,0.05)',border:'1px solid rgba(245,158,11,0.12)',borderRadius:'5px',padding:'5px 10px',marginBottom:'10px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#6B7280'}}>DEMO MODE · Showing estimated data</div>}
 
-           {!eventsLoading && eventsData.length > 0 && (function(){
-             var active = eventsData.filter(function(e){ return e.active; });
-             var upcoming = eventsData.filter(function(e){ return !e.active; });
-             // "soon" = nextDiff < 1h
-             var soon = upcoming.filter(function(e){ return e.nextDiff < 3600000; });
-             var later = upcoming.filter(function(e){ return !e.nextDiff || e.nextDiff >= 3600000; });
-             var allMaps = ['ALL MAPS'];
-             eventsData.forEach(function(e){ (e.maps||[]).forEach(function(m){ var mu=m.trim(); if(mu&&allMaps.indexOf(mu)===-1) allMaps.push(mu); }); });
-             var mapOk = function(e){ return eventsFilter==='ALL MAPS' || e.maps.some(function(m){ return m.toLowerCase()===eventsFilter.toLowerCase(); }); };
-             var instOk = function(i){ return eventsFilter==='ALL MAPS' || i.map.toLowerCase()===eventsFilter.toLowerCase(); };
-             var CardIcon = function(props){
-               return (
-                 <div className={props.cls}>
-                   {props.icon && <img src={props.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
-                 </div>
-               );
-             };
-             return (
+             {filtActive.length > 0 && (
                <>
-                 {eventsError==='demo' && <div style={{background:'rgba(245,158,11,0.05)',border:'1px solid rgba(245,158,11,0.12)',borderRadius:'5px',padding:'5px 10px',marginBottom:'10px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#6B7280'}}>DEMO MODE · Push to GitHub for live data</div>}
-
-                 {active.filter(mapOk).length > 0 && (
-                   <>
-                     <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
-                       <div style={{width:'7px',height:'7px',borderRadius:'50%',background:'#10B981',boxShadow:'0 0 8px #10B981',animation:'evIconPulse 1.5s ease infinite'}}></div>
-                       <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#10B981',letterSpacing:'3px'}}>ACTIVE NOW</span>
-                     </div>
-                     <div className="ev-grid">
-                       {active.filter(mapOk).map(function(ev,i){
-                         return (
-                           <div key={i} className="ev-card-active">
-                             <div style={{display:'flex',gap:'8px',alignItems:'flex-start',marginBottom:'6px'}}>
-                               <CardIcon cls="ev-icon-wrap-active" icon={ev.icon} />
-                               <div style={{flex:1,minWidth:0}}>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#E5E7EB',lineHeight:1.2}}>{ev.name}</div>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#4B5563',marginTop:'2px',lineHeight:1.3}}>{ev.maps.join(', ')}</div>
-                               </div>
-                             </div>
-                             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700,letterSpacing:'1px'}}>ENDS {ev.endsIn}</div>
+                 <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                   <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10B981',boxShadow:'0 0 8px #10B981',animation:'evIconPulse 1.5s ease infinite',flexShrink:0}}></div>
+                   <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#10B981',letterSpacing:'3px'}}>ACTIVE NOW</span>
+                 </div>
+                 <div className="ev-grid" style={{marginBottom:'16px'}}>
+                   {filtActive.map(function(ev,i){
+                     return (
+                       <div key={i} className="ev-card-active">
+                         <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'6px'}}>
+                           <div className="ev-icon-wrap-active">
+                             {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
                            </div>
-                         );
-                       })}
-                     </div>
-                   </>
-                 )}
-
-                 {soon.filter(mapOk).length > 0 && (
-                   <>
-                     <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
-                       <div style={{width:'7px',height:'7px',borderRadius:'50%',background:'#60A5FA',boxShadow:'0 0 6px #60A5FA',animation:'evIconPulse 2s ease infinite'}}></div>
-                       <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#60A5FA',letterSpacing:'3px'}}>UPCOMING NEXT</span>
-                     </div>
-                     <div className="ev-grid" style={{marginBottom:'14px'}}>
-                       {soon.filter(mapOk).map(function(ev,i){
-                         return (
-                           <div key={i} className="ev-card-soon">
-                             <div style={{display:'flex',gap:'8px',alignItems:'flex-start',marginBottom:'6px'}}>
-                               <CardIcon cls="ev-icon-wrap-soon" icon={ev.icon} />
-                               <div style={{flex:1,minWidth:0}}>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#C9D1DC',lineHeight:1.2}}>{ev.name}</div>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#4B5563',marginTop:'2px',lineHeight:1.3}}>{ev.maps.join(', ')}</div>
-                               </div>
-                             </div>
-                             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700,letterSpacing:'1px'}}>{ev.startsIn}</div>
+                           <div style={{flex:1,minWidth:0}}>
+                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB',lineHeight:1.2}}>{ev.name}</div>
+                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',marginTop:'1px'}}>{ev.map}</div>
                            </div>
-                         );
-                       })}
-                     </div>
-                   </>
-                 )}
-
-                 {(active.length>0 || soon.length>0) && later.filter(mapOk).length>0 && (
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#374151',letterSpacing:'2px',marginBottom:'10px',marginTop:'4px'}}>FILTER BY MAP</div>
-                 )}
-                 {!(active.length>0 || soon.length>0) && (
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#374151',letterSpacing:'2px',marginBottom:'10px'}}>FILTER BY MAP</div>
-                 )}
-                 <div className="events-filter-row">
-                   {allMaps.map(function(m){
-                     return <button key={m} className={'events-filter-btn'+(eventsFilter===m?' active':'')} onClick={function(){ setEventsFilter(m); }}>{m}</button>;
+                         </div>
+                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.6rem',color:'#10B981',fontWeight:700,letterSpacing:'0.5px'}}>ENDS {ev.countdown}</div>
+                       </div>
+                     );
                    })}
                  </div>
-
-                 {later.filter(mapOk).map(function(ev,i){
-                   var insts = ev.instances.filter(instOk).slice(0,3);
-                   return (
-                     <div key={i} className="ev-list-card">
-                       <div className="ev-list-header">
-                         <CardIcon cls="ev-icon-wrap-later" icon={ev.icon} />
-                         <div style={{flex:1,minWidth:0}}>
-                           <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#6B7280',lineHeight:1.2}}>{ev.name}</div>
-                           <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#374151',marginTop:'1px'}}>{ev.maps.join(', ')}</div>
-                         </div>
-                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700,letterSpacing:'0.5px',flexShrink:0}}>{ev.startsIn}</div>
-                       </div>
-                       {insts.length>0 && (
-                         <div className="ev-list-instances">
-                           {insts.map(function(inst,ii){
-                             return (
-                               <div key={ii} className="ev-inst-row">
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#4B5563'}}>{inst.timeRange}{eventsFilter==='ALL MAPS'?' · '+inst.map:''}</div>
-                                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#374151'}}>{inst.countdown}</div>
-                               </div>
-                             );
-                           })}
-                         </div>
-                       )}
-                     </div>
-                   );
-                 })}
-
-                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#2D3748',textAlign:'center',padding:'10px',letterSpacing:'0.5px'}}>Data · metaforge.app/arc-raiders 🙏</div>
                </>
-             );
-           })()}
-         </div>
-       )}
+             )}
+
+             {soon.filter(function(c){ return eventsFilter==='ALL MAPS'||c.map===eventsFilter; }).length > 0 && (
+               <>
+                 <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                   <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#60A5FA',boxShadow:'0 0 6px #60A5FA',animation:'evIconPulse 2s ease infinite',flexShrink:0}}></div>
+                   <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#60A5FA',letterSpacing:'3px'}}>UPCOMING NEXT</span>
+                 </div>
+                 <div className="ev-grid" style={{marginBottom:'16px'}}>
+                   {soon.filter(function(c){ return eventsFilter==='ALL MAPS'||c.map===eventsFilter; }).map(function(ev,i){
+                     return (
+                       <div key={i} className="ev-card-soon">
+                         <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'6px'}}>
+                           <div className="ev-icon-wrap-soon">
+                             {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                           </div>
+                           <div style={{flex:1,minWidth:0}}>
+                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#C9D1DC',lineHeight:1.2}}>{ev.name}</div>
+                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#4B5563',marginTop:'1px'}}>{ev.map}</div>
+                           </div>
+                         </div>
+                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.6rem',color:'#60A5FA',fontWeight:700,letterSpacing:'0.5px'}}>{ev.countdown}</div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </>
+             )}
+
+             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',fontWeight:700,color:'#374151',letterSpacing:'2px',marginBottom:'8px'}}>FILTER BY MAP</div>
+             <div className="events-filter-row" style={{marginBottom:'14px'}}>
+               {allMaps.map(function(m){
+                 return <button key={m} className={'events-filter-btn'+(eventsFilter===m?' active':'')} onClick={function(){ setEventsFilter(m); }}>{m}</button>;
+               })}
+             </div>
+
+             {filtered.map(function(ev,i){
+               return (
+                 <div key={i} className="ev-list-card">
+                   <div className="ev-list-header">
+                     <div className="ev-icon-wrap-later">
+                       {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                     </div>
+                     <div style={{flex:1,minWidth:0}}>
+                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#6B7280',lineHeight:1.2}}>{ev.name}</div>
+                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#374151',marginTop:'1px'}}>{ev.map}</div>
+                     </div>
+                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.6rem',color:'#4B5563',fontWeight:700,flexShrink:0,letterSpacing:'0.5px'}}>{ev.countdown}</div>
+                   </div>
+                   <div className="ev-list-instances">
+                     <div className="ev-inst-row">
+                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#4B5563'}}>{ev.timeRange}</div>
+                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#374151'}}>{ev.map}</div>
+                     </div>
+                   </div>
+                 </div>
+               );
+             })}
+
+             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',color:'#2D3748',textAlign:'center',padding:'10px',letterSpacing:'0.5px'}}>Data · metaforge.app/arc-raiders 🙏</div>
+           </div>
+         );
+       })()}
 
             {activeTab === 'INVENTORY' && (
        <div className="footer">
