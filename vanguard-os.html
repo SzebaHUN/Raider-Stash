@@ -555,6 +555,11 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [tradeOfflineOffer, setTradeOfflineOffer] = useState(null);
   const [tradeOfflineComment, setTradeOfflineComment] = useState('');
   const [tradeOfferSentToast, setTradeOfferSentToast] = useState(null);
+  const [eventsData, setEventsData] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState(null);
+  const [eventsFilter, setEventsFilter] = useState('ALL');
+  const [eventsLastFetch, setEventsLastFetch] = useState(0);
   const [tradeExpandedNotif, setTradeExpandedNotif] = useState(null);
   const [tradeNotifs, setTradeNotifs] = useState([
     { id:1, type:'accepted', username:'GhostRaider',  gave:'Osprey Blueprint',  got:'Bettina Blueprint',   time:'2h ago',
@@ -686,6 +691,36 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     }, 1600);
     return function(){ clearTimeout(t); };
   }, [tradeMyConfirmed]);
+
+  useEffect(function(){
+    if (activeTab !== 'EVENTS') return;
+    var now = Date.now();
+    if (now - eventsLastFetch < 60000 && eventsData.length > 0) return;
+    setEventsLoading(true);
+    setEventsError(null);
+    var directUrl  = 'https://metaforge.app/api/arc-raiders/events-schedule';
+    var proxyUrl   = 'https://api.allorigins.win/get?url=' + encodeURIComponent(directUrl);
+    var parseAndSet = function(raw) {
+      var data = (raw && typeof raw.contents === 'string') ? JSON.parse(raw.contents) : raw;
+      var arr = Array.isArray(data) ? data : (data.events || data.data || []);
+      if (!arr || arr.length === 0) throw new Error('empty');
+      setEventsData(arr);
+      setEventsLastFetch(Date.now());
+      setEventsLoading(false);
+    };
+    fetch(directUrl)
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(parseAndSet)
+      .catch(function() {
+        fetch(proxyUrl)
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(parseAndSet)
+          .catch(function() {
+            setEventsError('Could not load live events. Check metaforge.app/arc-raiders/event-timers directly.');
+            setEventsLoading(false);
+          });
+      });
+  }, [activeTab]);
 
 
 
@@ -1195,7 +1230,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       white-space: nowrap; }
 .nav-tab.active { background: rgba(245,158,11,0.08); color: #F59E0B; border-color: transparent; border-bottom: 2px solid #F59E0B; font-weight: 700; }
 .nav-tab:active { transform: scale(0.98); }
-.main-content { flex: 1; padding: 16px; overflow-y: auto; }
+.main-content { flex: 1; padding: 16px; padding-bottom: 72px; overflow-y: auto; }
       .section-title { font-family: 'Rajdhani', sans-serif;
       font-size: 0.72rem;
       font-weight: 700;
@@ -1822,6 +1857,35 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .welcome-rewards-count { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700; color:#F59E0B; }
       .welcome-close { width:100%; padding:11px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#F59E0B; font-family:'Rajdhani',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:3px; cursor:pointer; transition:background 0.2s; }
       .welcome-close:active { background:rgba(245,158,11,0.22); }
+      .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:rgba(15,20,25,0.98); border-top:1px solid rgba(245,158,11,0.35); padding:6px 12px 6px; display:flex; gap:4px; z-index:100; backdrop-filter:blur(10px); box-sizing:border-box; }
+      .bottom-nav-tab { flex:1; min-width:0; padding:8px 2px; background:rgba(15,20,28,0.4); border:1px solid rgba(55,65,81,0.35); color:#9CA3AF; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:600; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s ease; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); white-space:nowrap; }
+      .bottom-nav-tab.active { background:rgba(245,158,11,0.08); color:#F59E0B; border-color:transparent; border-top:2px solid #F59E0B; font-weight:700; }
+      .bottom-nav-tab:active { transform:scale(0.98); }
+      .main-content-padded { padding-bottom:60px; }
+      .events-filter-row { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin-bottom:14px; padding-bottom:2px; }
+      .events-filter-row::-webkit-scrollbar { display:none; }
+      .events-filter-btn { flex-shrink:0; padding:5px 12px; border-radius:20px; font-family:'Rajdhani',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:1px; cursor:pointer; border:1px solid rgba(55,65,81,0.4); background:rgba(15,20,28,0.6); color:#6B7280; transition:all 0.15s; }
+      .events-filter-btn.active { background:rgba(245,158,11,0.12); border-color:#F59E0B; color:#F59E0B; }
+      .event-card { border-radius:10px; overflow:hidden; margin-bottom:10px; border:1px solid rgba(55,65,81,0.3); background:rgba(10,14,22,0.88); }
+      .event-card.active-event { border-color:rgba(16,185,129,0.45); background:rgba(6,14,12,0.92); }
+      .event-card-header { padding:10px 14px; display:flex; align-items:center; gap:10px; }
+      .event-status-badge { font-family:'Orbitron',sans-serif; font-size:0.55rem; font-weight:700; letter-spacing:2px; padding:3px 8px; border-radius:4px; flex-shrink:0; }
+      .event-status-badge.active { background:rgba(16,185,129,0.18); color:#10B981; border:1px solid rgba(16,185,129,0.35); }
+      .event-status-badge.upcoming { background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); }
+      .event-name { font-family:'Orbitron',sans-serif; font-size:0.78rem; font-weight:700; color:#E5E7EB; letter-spacing:0.5px; flex:1; }
+      .event-map-tag { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:700; color:#6B7280; letter-spacing:1.5px; }
+      .event-time-row { padding:0 14px 8px; display:flex; align-items:center; gap:8px; }
+      .event-time-main { font-family:'Rajdhani',sans-serif; font-size:0.9rem; font-weight:700; color:#E5E7EB; }
+      .event-countdown { font-family:'Orbitron',sans-serif; font-size:0.7rem; color:#10B981; font-weight:700; }
+      .event-countdown.soon { color:#F59E0B; }
+      .event-instances { padding:0 14px 10px; display:flex; flex-direction:column; gap:3px; border-top:1px solid rgba(30,40,55,0.6); padding-top:8px; margin-top:4px; }
+      .event-instance-row { display:flex; align-items:center; justify-content:space-between; padding:4px 0; }
+      .event-instance-time { font-family:'Rajdhani',sans-serif; font-size:0.75rem; color:#9CA3AF; }
+      .event-instance-cd { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#6B7280; }
+      .event-instance-row.active-slot .event-instance-time { color:#10B981; font-weight:700; }
+      .event-instance-row.active-slot .event-instance-cd { color:#10B981; }
+      .events-attribution { font-family:'Rajdhani',sans-serif; font-size:0.65rem; color:#374151; text-align:center; padding:8px; letter-spacing:0.5px; }
+      .events-attribution a { color:#4B5563; }
       .trade-page-header { font-family:'Orbitron',sans-serif; font-size:0.72rem; font-weight:700; color:#F59E0B; letter-spacing:2px; margin-bottom:3px; }
       .trade-sub { font-family:'Rajdhani',sans-serif; font-size:0.68rem; color:#6B7280; letter-spacing:1px; }
       .trade-limit-bar { display:flex; align-items:center; justify-content:space-between; background:rgba(15,20,28,0.6); border:1px solid rgba(55,65,81,0.35); border-radius:8px; padding:10px 14px; margin-bottom:16px; }
@@ -1944,7 +2008,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
        </div>
 
        <div className="nav-tabs">
-         {['RAIDER', 'INVENTORY', 'WORKSHOP', 'TRADERS', 'DECKS', 'TRADE'].map(tab => (
+         {['RAIDER', 'INVENTORY', 'WORKSHOP', 'TRADERS'].map(tab => (
           <button
             key={tab}
             className={`nav-tab ${activeTab === tab ? 'active' : ''}`}
@@ -3375,6 +3439,16 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
           </div>
         </div>
       )}
+    <div className="bottom-nav">
+        {['DECKS','TRADE','EVENTS'].map(function(tab){
+          return (
+            <button key={tab} className={'bottom-nav-tab'+(activeTab===tab?' active':'')}
+              onClick={function(){ setActiveTab(tab); }}>
+              {tab}
+            </button>
+          );
+        })}
+      </div>
     </>
   );
 };
