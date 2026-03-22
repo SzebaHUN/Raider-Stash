@@ -576,7 +576,7 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
       e.instances.push({timeRange:fmt(ev.startTime)+' – '+fmt(ev.endTime),map:ev.map,startTime:ev.startTime,endTime:ev.endTime,active:isAct,countdown:cdStr,diff:isAct?0:(ev.startTime-now)});
       if (!isAct && (ev.startTime-now) > 0 && (ev.startTime-now) < e.nextDiff) e.nextDiff = ev.startTime-now;
     });
-    var list = Object.values(eventMap).map(function(e){
+    var list = Object.keys(eventMap).map(function(k){ return eventMap[k]; }).map(function(e){
       e.instances.sort(function(a,b){return a.startTime-b.startTime;});
       if (e.active) { var ai=e.instances.find(function(i){return i.active;}); e.endsIn=ai?ai.countdown:''; }
       else { var ni=e.instances.find(function(i){return i.diff>0;}); e.startsIn=ni?ni.countdown:''; }
@@ -755,45 +755,31 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
     if (window.location.protocol === 'file:') { loadDemoEvents(); return; }
 
     var target = 'https://metaforge.app/api/arc-raiders/events-schedule';
-    var proxies = [
-      'https://api.allorigins.win/get?url=' + encodeURIComponent(target),
-      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(target),
-      'https://thingproxy.freeboard.io/fetch/' + target,
-    ];
-    var parseRaw = function(raw) {
-      if (raw && typeof raw.contents === 'string') return JSON.parse(raw.contents);
-      if (raw && typeof raw.body === 'string') return JSON.parse(raw.body);
-      return raw;
-    };
-    var tryProxy = function(idx) {
-      if (idx >= proxies.length) {
-        // All proxies failed — show demo data with a notice
-        loadDemoEvents();
-        return;
-      }
-      fetch(proxies[idx])
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(target);
+
+    // Fast fetch with 5s timeout via AbortController
+    var fetchFast = function(url, isProxy) {
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      if (ctrl) setTimeout(function(){ ctrl.abort(); }, 5000);
+      return fetch(url, ctrl ? {signal: ctrl.signal} : {})
+        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(raw) {
-          var data = parseRaw(raw);
+          var data = (isProxy && raw && typeof raw.contents === 'string') ? JSON.parse(raw.contents) : raw;
           var arr = Array.isArray(data) ? data : (data.events || data.data || []);
           if (!arr || arr.length === 0) throw new Error('empty');
-          setEventsData(arr);
+          setEventsRaw(arr);
           setEventsLastFetch(Date.now());
           setEventsLoading(false);
-        })
-        .catch(function() { tryProxy(idx + 1); });
+        });
     };
-    // Try direct first, then proxies
-    fetch(target)
-      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function(data) {
-        var arr = Array.isArray(data) ? data : (data.events || data.data || []);
-        if (!arr || arr.length === 0) throw new Error('empty');
-        setEventsData(arr);
-        setEventsLastFetch(Date.now());
-        setEventsLoading(false);
+
+    fetchFast(target, false)
+      .catch(function() {
+        return fetchFast(proxyUrl, true);
       })
-      .catch(function() { tryProxy(0); });
+      .catch(function() {
+        loadDemoEvents();
+      });
   }, [activeTab]);
 
 
