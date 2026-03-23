@@ -3642,7 +3642,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                       </div>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {cdJSX(ev.endTime-Date.now())}</div>
-                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                       </div>
                     </div>
                   ))}
@@ -3669,7 +3669,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                       </div>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{cdJSX(ev.diff)}</div>
-                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                       </div>
                     </div>
                   ))}
@@ -3700,7 +3700,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                           </div>
                           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px',flexShrink:0}}>
                             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{cdJSX(ev.diff)}</div>
-                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                           </div>
                         </div>
                       </div>
@@ -3791,7 +3791,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                                     <div style={{flex:1,minWidth:0}}>
                                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#E5E7EB'}}>{ev.name}</div>
                                     </div>
-                                    <button onClick={function(){ setCalendarInviteTarget(ev); setCalendarInviteSelected(null); setCalendarInviteMsg(''); setCalendarShowFriendPicker(false); }}
+                                    <button onClick={function(){ setCalendarInviteTarget(ev); setCalendarInviteSelected([]); setCalendarInviteMsg(''); setCalendarShowFriendPicker(false); }}
                                       className="ev-invite-btn" style={{flexShrink:0}}>+ INVITE</button>
                                   </div>
                                 ))}
@@ -3858,7 +3858,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             {calendarInviteSuccess && (
               <div className="trade-success-overlay" style={{zIndex:9100}}>
                 <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',boxShadow:'0 0 60px rgba(245,158,11,0.12)',textAlign:'center'}}>
-                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>⚡</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.4rem',color:'#F59E0B',marginBottom:'8px',fontWeight:700}}>◈</div>
                   <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
                   <div className="trade-success-sub">{calendarInviteSuccess.username} invited to</div>
                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{calendarInviteSuccess.event}</div>
@@ -3921,11 +3921,13 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                       <button onClick={function(){
                         if(!eventsInviteSelected.length) return;
                         var snd=new Audio('assets/friend.mp3');snd.volume=1.0;snd.play().catch(function(){});
-                        var tgt=eventsInviteTarget; var frnd=eventsInviteSelected[0];
+                        var tgt=eventsInviteTarget; var frnds=eventsInviteSelected;
                         var tm=(function(){ var d=new Date(tgt.startTime||Date.now()); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
+                        var names=frnds.map(function(f){return f.username;}).join(' & ');
                         setEventsInviteTarget(null);
-                        setEventsInviteSuccess({username:frnd.username,event:tgt.name,map:tgt.map,time:tm});
-                        setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:frnd.username,event:tgt.name,map:tgt.map,time:tm,timeAgo:'Just now',msg:''}].concat(prev); });
+                        setEventsInviteSelected([]);
+                        setEventsInviteSuccess({username:names,event:tgt.name,map:tgt.map,time:tm});
+                        setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:names,event:tgt.name,map:tgt.map,time:tm,timeAgo:'Just now',msg:'',squad:frnds.map(function(f){return f.username;}),squadMax:3}].concat(prev); });
                         setTimeout(function(){setEventsInviteSuccess(null);},3500);
                       }} style={{flex:1,padding:'11px',background:eventsInviteSelected.length?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(eventsInviteSelected.length?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color:eventsInviteSelected.length?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:eventsInviteSelected?'pointer':'default'}}>
                         {eventsInviteSelected.length>0?'SEND INVITE · '+evtTime+' ('+eventsInviteSelected.length+')':'SEND INVITE'}
@@ -3953,7 +3955,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
             {eventsInviteSuccess && (
               <div className="trade-success-overlay" style={{zIndex:9100}}>
                 <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',textAlign:'center'}}>
-                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>⚡</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.4rem',color:'#F59E0B',marginBottom:'8px',fontWeight:700}}>◈</div>
                   <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
                   <div className="trade-success-sub">{eventsInviteSuccess.username} has been invited to</div>
                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsInviteSuccess.event}</div>
