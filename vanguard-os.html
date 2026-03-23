@@ -462,8 +462,6 @@
     #side-right{position:fixed;top:0;right:0;width:calc((100vw - 480px)/2);height:100%;background:#000;z-index:1;}
     #root{position:relative;z-index:2;}
     #error-display{display:none;position:fixed;top:0;left:0;right:0;background:#c00;color:#fff;padding:12px 14px;font-size:11px;z-index:9999;white-space:pre-wrap;word-break:break-all;max-height:50vh;overflow-y:auto;}
-    .main-content{padding-top:0px!important;}
-    .container.events-active .main-content{margin-top:-60px;}
   </style>
 </head>
 <body>
@@ -598,25 +596,42 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [eventsFilter, setEventsFilter] = useState('ALL MAPS');
   const [eventsTick, setEventsTick] = useState(0);
   const [eventsInviteTarget, setEventsInviteTarget] = useState(null);
-  const [eventsInviteFriend, setEventsInviteFriend] = useState(null);
+  const [eventsInviteSelected, setEventsInviteSelected] = useState([]);
   const [eventsInviteMsg, setEventsInviteMsg] = useState('');
   const [eventsInviteSuccess, setEventsInviteSuccess] = useState(null);
   const [eventsShowFriendPicker, setEventsShowFriendPicker] = useState(false);
   const [eventsNotifs, setEventsNotifs] = useState([
     { id:1, type:'accepted', username:'GhostRaider', event:'Night Raid', map:'Stella Montis', time:'19:00', timeAgo:'2h ago',
-      msg:"Let's kick some ass bro 🔥 I've been grinding prep all day"},
-    { id:2, type:'incoming', username:'NightCrawler', event:'Electromagnetic Storm', map:'Blue Gate', time:'20:00', timeAgo:'45m ago',
-      msg:"Got a squad slot open, you in? Storm looks insane tonight 💀"},
-    { id:3, type:'declined', username:'ArcHunter', event:'Bird City', map:'Buried City', time:'18:00', timeAgo:'3h ago', msg:'Sorry man, got another run lined up'},
-    { id:4, type:'sent', username:'SteelThorn', event:'Matriarch', map:'Dam', time:'21:00', timeAgo:'1h ago', msg:''},
+      msg:"Let's kick some ass bro 🔥 I've been grinding prep all day", squad:['GhostRaider','NightCrawler'], squadMax:3 },
+    { id:2, type:'accepted', username:'NightCrawler', event:'Night Raid', map:'Stella Montis', time:'19:00', timeAgo:'2h ago',
+      msg:"Okay lets do this baby, been waiting all week 💀", squad:['GhostRaider','NightCrawler'], squadMax:3 },
+    { id:3, type:'incoming', username:'SteelThorn', event:'Electromagnetic Storm', map:'Blue Gate', time:'20:00', timeAgo:'45m ago',
+      msg:"Got a squad slot open, you in? Storm looks insane tonight", squad:['SteelThorn'], squadMax:3 },
+    { id:4, type:'declined', username:'ArcHunter', event:'Bird City', map:'Buried City', time:'18:00', timeAgo:'3h ago', msg:'Sorry man, got another run lined up', squad:[], squadMax:3 },
+    { id:5, type:'sent', username:'VaultBreaker', event:'Matriarch', map:'Dam', time:'21:00', timeAgo:'1h ago', msg:'', squad:['VaultBreaker'], squadMax:3},
   ]);
   const [eventsNotifExpanded, setEventsNotifExpanded] = useState(null);
+  const [eventsLaterOpen, setEventsLaterOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarSelectedDay, setCalendarSelectedDay] = useState(null);
+  const [calendarDayEvents, setCalendarDayEvents] = useState([]);
+  const [calendarInviteTarget, setCalendarInviteTarget] = useState(null);
+  const [calendarInviteSelected, setCalendarInviteSelected] = useState([]);
+  const [calendarInviteMsg, setCalendarInviteMsg] = useState('');
+  const [calendarInviteSuccess, setCalendarInviteSuccess] = useState(null);
+  const [calendarShowFriendPicker, setCalendarShowFriendPicker] = useState(false);
+  const [calendarOpenMaps, setCalendarOpenMaps] = useState({});
+  const calendarRef = React.useRef(null);
   const [eventsNotifsOpen, setEventsNotifsOpen] = useState(false);
   const [eventsAttendOpen, setEventsAttendOpen] = useState(false);
   const [eventsReminder, setEventsReminder] = useState(null);
   const [eventsAcceptSuccess, setEventsAcceptSuccess] = useState(null);
   const eventsReminderShown = React.useRef(false);
   const eventsBuiltCache = React.useRef([]);
+  const eventsTabRef = React.useRef(null);
+
+
 
   useEffect(function(){
     var el = document.querySelector('.container');
@@ -634,9 +649,12 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   const [eventsCancelMsg, setEventsCancelMsg] = useState('');
   const [eventsCancelSuccess, setEventsCancelSuccess] = useState(null);
   const [attendList, setAttendList] = useState([
-    {id:1, username:'GhostRaider', event:'Night Raid', map:'Stella Montis', icon:'https://cdn.metaforge.app/arc-raiders/custom/night.webp'},
-    {id:2, username:'NightCrawler', event:'Electromagnetic Storm', map:'Blue Gate', icon:'https://cdn.metaforge.app/arc-raiders/custom/electrical.webp'},
-    {id:3, username:'SteelThorn', event:'Bird City', map:'Buried City', icon:'https://cdn.metaforge.app/arc-raiders/custom/birdcity.webp'},
+    {id:1, event:'Night Raid', map:'Stella Montis', icon:'https://cdn.metaforge.app/arc-raiders/custom/night.webp',
+      squad:['GhostRaider','NightCrawler'], squadMax:3},
+    {id:2, event:'Electromagnetic Storm', map:'Blue Gate', icon:'https://cdn.metaforge.app/arc-raiders/custom/electrical.webp',
+      squad:['SteelThorn'], squadMax:3},
+    {id:3, event:'Bird City', map:'Buried City', icon:'https://cdn.metaforge.app/arc-raiders/custom/birdcity.webp',
+      squad:['IronVeil','SandDrifter'], squadMax:3},
   ]);
   const [eventsLastFetch, setEventsLastFetch] = useState(0);
   const [tradeExpandedNotif, setTradeExpandedNotif] = useState(null);
@@ -1327,10 +1345,15 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .header { background: rgba(15, 20, 25, 0.98);
       border-bottom: 1px solid rgba(245,158,11,0.35);
       padding: 8px 12px;
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
       z-index: 100;
-      backdrop-filter: blur(10px); }
+      backdrop-filter: blur(10px);
+      box-sizing: border-box; }
 .player-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
       .player-name { font-family: 'Orbitron', sans-serif;
       font-size: 0.9rem;
@@ -1353,8 +1376,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       border: 1px solid rgba(55,65,81,0.35);
       color: #9CA3AF;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 0.68rem;
-      font-weight: 600;
+      font-size: 0.72rem;
+      font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -1362,19 +1385,19 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       white-space: nowrap; }
 .nav-tab.active { background: rgba(245,158,11,0.08); color: #F59E0B; border-color: transparent; border-bottom: 2px solid #F59E0B; font-weight: 700; }
 .nav-tab:active { transform: scale(0.98); }
-.main-content { flex: 1; padding: 4px 16px 72px; overflow-y: auto; }
+.main-content { flex: 1; padding: 16px; padding-top: 90px; padding-bottom: 72px; overflow-y: auto; }
       .section-title { font-family: 'Rajdhani', sans-serif;
-      font-size: 0.72rem;
+      font-size: 0.78rem;
       font-weight: 700;
       color: #9CA3AF;
-      letter-spacing: 3px;
+      letter-spacing: 2px;
       margin-bottom: 10px;
       padding-bottom: 6px;
       border-bottom: 1px solid #374151;
       display: flex;
       justify-content: space-between;
       align-items: center; }
-.section-count { font-size: 0.7rem; color: #6B7280; font-weight: 600; letter-spacing: 0.5px; }
+.section-count { font-size: 0.72rem; color: #9CA3AF; font-weight: 600; letter-spacing: 0.5px; }
       .category-sidebar { display: flex;
       gap: 8px;
       margin-bottom: 12px;
@@ -1444,9 +1467,9 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .slot-row.backpack { grid-template-columns: repeat(2, 1fr); }
       .slot-row.quick { grid-template-columns: repeat(2, 1fr); }
       .slot-label { font-family: 'Rajdhani', sans-serif;
-      font-size: 0.6rem;
+      font-size: 0.65rem;
       font-weight: 700;
-      color: #6B7280;
+      color: #9CA3AF;
       letter-spacing: 3px;
       margin-bottom: 5px; }
       .slot {
@@ -1645,7 +1668,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .station-btn:active { transform: scale(0.95); }
       .station-btn-icon { font-size: 1.4rem; }
       .station-btn-name { font-family: 'Rajdhani', sans-serif;
-      font-size: 0.58rem;
+      font-size: 0.65rem;
       font-weight: 700;
       color: #9CA3AF;
       letter-spacing: 1px;
@@ -1717,15 +1740,15 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .shop-item-card.rarity-B { border-color: #06B6D4; }
       .shop-item-card.rarity-C { border-color: #374151; }
       .shop-item-icon { font-size: 1.6rem; line-height: 1; }
-.shop-item-name { font-family: 'Rajdhani', sans-serif; font-size: 0.5rem; color: #9CA3AF; margin-top: 3px; text-align: center; line-height: 1.2; }
-.shop-item-price { font-family: 'Rajdhani', sans-serif; font-size: 0.55rem; font-weight: 700; color: #F59E0B; margin-top: 2px; }
+.shop-item-name { font-family: 'Rajdhani', sans-serif; font-size: 0.68rem; font-weight: 600; color: #9CA3AF; margin-top: 3px; text-align: center; line-height: 1.2; }
+.shop-item-price { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; color: #F59E0B; margin-top: 2px; }
       .quest-card { background: rgba(30,41,59,0.6);
       border: 1px solid #374151;
       border-left: 3px solid #F59E0B;
       padding: 12px; margin-bottom: 8px;
       clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
       .quest-name { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; color: #F59E0B; letter-spacing: 1px; margin-bottom: 4px; }
-      .quest-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.72rem; color: #9CA3AF; line-height: 1.4; }
+      .quest-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.75rem; font-weight: 600; color: #9CA3AF; line-height: 1.4; }
       .quest-reward { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; color: #10B981; margin-top: 6px; }
       @keyframes raiderpulse { 0%,100% { opacity: 1; }
       50% { opacity: 0.7; } }
@@ -1758,8 +1781,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .raider-menu-row:last-child { border-bottom: none; }
       .raider-menu-row:active { background: rgba(245,158,11,0.06); }
       .raider-menu-icon { font-size: 1rem; width: 22px; text-align: center; color: #F59E0B; }
-      .raider-menu-label { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; color: #E5E7EB; letter-spacing: 1.5px; }
-      .raider-menu-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.6rem; color: #6B7280; margin-top: 1px; }
+      .raider-menu-label { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; color: #F0F4F8; letter-spacing: 1.5px; }
+      .raider-menu-desc { font-family: 'Rajdhani', sans-serif; font-size: 0.68rem; font-weight: 600; color: #9CA3AF; margin-top: 1px; }
       .raider-menu-arrow { margin-left: auto; color: #4B5563; font-size: 0.9rem; }
       .project-card { background: rgba(30,41,59,0.5);
       border: 1px solid rgba(245,158,11,0.15);
@@ -1927,16 +1950,16 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .cl-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
       .cl-dot.buildable { background:#10B981; box-shadow:0 0 6px rgba(16,185,129,0.6); }
       .cl-dot.locked { background:#4B5563; }
-      .cl-card-name { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; color:#E5E7EB; letter-spacing:1.5px; flex:1; }
+      .cl-card-name { font-family:'Rajdhani',sans-serif; font-size:0.82rem; font-weight:700; color:#F0F4F8; letter-spacing:1.5px; flex:1; }
       .cl-card.buildable .cl-card-name { color:#fff; }
       .cl-card-body { padding:0 12px 12px; border-top:1px solid rgba(55,65,81,0.25); }
-      .cl-desc { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#9CA3AF; line-height:1.45; padding:8px 0 6px; }
+      .cl-desc { font-family:'Rajdhani',sans-serif; font-size:0.75rem; font-weight:600; color:#9CA3AF; line-height:1.45; padding:8px 0 6px; }
       .cl-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
       .cl-tag { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.5px; padding:2px 7px; border-radius:3px; background:rgba(30,41,59,0.8); border:1px solid rgba(55,65,81,0.5); color:#D1D5DB; }
       .cl-cost-title { font-family:'Rajdhani',sans-serif; font-size:0.62rem; font-weight:700; color:#6B7280; letter-spacing:2px; margin-bottom:5px; }
       .cl-cost-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
       .cl-cost-row:last-child { border-bottom:none; }
-      .cl-cost-name { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#D1D5DB; }
+      .cl-cost-name { font-family:'Rajdhani',sans-serif; font-size:0.75rem; font-weight:600; color:#E5E7EB; }
       .cl-cost-qty { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:700; color:#F59E0B; }
       .cl-btns { display:flex; gap:6px; margin-top:10px; }
       .cl-btn { flex:1; padding:8px 4px; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:1px; cursor:pointer; border-radius:4px; border:1px solid; transition:all 0.15s; text-align:center; }
@@ -1990,7 +2013,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .welcome-close { width:100%; padding:11px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#F59E0B; font-family:'Rajdhani',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:3px; cursor:pointer; transition:background 0.2s; }
       .welcome-close:active { background:rgba(245,158,11,0.22); }
       .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:rgba(15,20,25,0.98); border-top:1px solid rgba(245,158,11,0.35); padding:6px 12px 6px; display:flex; gap:4px; z-index:100; backdrop-filter:blur(10px); box-sizing:border-box; }
-      .bottom-nav-tab { flex:1; min-width:0; padding:8px 2px; background:rgba(15,20,28,0.4); border:1px solid rgba(55,65,81,0.35); color:#9CA3AF; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:600; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s ease; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); white-space:nowrap; }
+      .bottom-nav-tab { flex:1; min-width:0; padding:8px 2px; background:rgba(15,20,28,0.4); border:1px solid rgba(55,65,81,0.35); color:#9CA3AF; font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s ease; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); white-space:nowrap; }
       .bottom-nav-tab.active { background:rgba(245,158,11,0.08); color:#F59E0B; border-color:transparent; border-top:2px solid #F59E0B; font-weight:700; }
       .bottom-nav-tab:active { transform:scale(0.98); }
       .main-content-padded { padding-bottom:60px; }
@@ -2002,8 +2025,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       @keyframes evBluePulse  { 0%,100%{box-shadow:0 0 5px rgba(96,165,250,0.2);}  50%{box-shadow:0 0 14px rgba(96,165,250,0.45),0 0 24px rgba(96,165,250,0.15);} }
       @keyframes evIconPulse  { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
       .ev-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:14px; }
-      .ev-card-active { background:rgba(4,18,10,0.95); border:1px solid rgba(16,185,129,0.5); border-radius:10px; padding:10px; animation:evGreenPulse 2.4s ease infinite; } .ev-attend-urgent { border-color:rgba(239,68,68,0.5)!important; animation:evRedPulse 1.8s ease infinite; } .ev-attend-soon { border-color:rgba(245,158,11,0.45)!important; animation:evOrangePulse 2s ease infinite; } .ev-attend-later { border-color:rgba(96,165,250,0.35)!important; animation:evBluePulse 3s ease infinite; }
-      .ev-card-soon   { background:rgba(6,10,22,0.95); border:1px solid rgba(96,165,250,0.4); border-radius:10px; padding:10px; animation:evBluePulse  2.8s ease infinite; }
+      .ev-card-active { background:rgba(4,18,10,0.95); border:1px solid rgba(16,185,129,0.5); border-radius:10px; padding:10px; } .ev-attend-urgent { border-color:rgba(239,68,68,0.5)!important; animation:evRedPulse 1.8s ease infinite; } .ev-attend-soon { border-color:rgba(245,158,11,0.45)!important; animation:evOrangePulse 2s ease infinite; } .ev-attend-later { border-color:rgba(96,165,250,0.35)!important; animation:evBluePulse 3s ease infinite; }
+      .ev-card-soon   { background:rgba(6,10,22,0.95); border:1px solid rgba(96,165,250,0.4); border-radius:10px; padding:10px; }
       .ev-card-later  { background:rgba(10,13,20,0.88); border:1px solid rgba(40,50,65,0.35); border-radius:10px; padding:10px; opacity:0.72; }
       .ev-icon-wrap-active { width:36px;height:36px;border-radius:6px;border:1px solid rgba(16,185,129,0.6);overflow:hidden;flex-shrink:0;background:rgba(6,20,12,0.8); }
       .ev-icon-wrap-soon   { width:36px;height:36px;border-radius:6px;border:1px solid rgba(96,165,250,0.45);overflow:hidden;flex-shrink:0;background:rgba(6,10,22,0.8); }
@@ -2025,7 +2048,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .ev-section-bar { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(10,14,22,0.92); border:1px solid rgba(40,55,70,0.4); border-radius:8px; cursor:pointer; margin-bottom:6px; } @keyframes attendGoldPulse { 0%,100%{border-color:rgba(245,158,11,0.3);box-shadow:0 0 6px rgba(245,158,11,0.1);} 50%{border-color:rgba(245,158,11,0.65);box-shadow:0 0 16px rgba(245,158,11,0.3);} } .ev-attend-bar-pulse { animation:attendGoldPulse 2.5s ease infinite; }
       .ev-attend-card { background:rgba(8,12,20,0.9); border:1px solid rgba(55,65,81,0.3); border-radius:8px; padding:10px 12px; margin-bottom:6px; }
       .trade-page-header { font-family:'Orbitron',sans-serif; font-size:0.72rem; font-weight:700; color:#F59E0B; letter-spacing:2px; margin-bottom:3px; }
-      .trade-sub { font-family:'Rajdhani',sans-serif; font-size:0.68rem; color:#6B7280; letter-spacing:1px; }
+      .trade-sub { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#9CA3AF; font-weight:600; letter-spacing:1px; }
       .trade-limit-bar { display:flex; align-items:center; justify-content:space-between; background:rgba(15,20,28,0.6); border:1px solid rgba(55,65,81,0.35); border-radius:8px; padding:10px 14px; margin-bottom:16px; }
       .trade-limit-dots { display:flex; gap:7px; }
       .trade-limit-dot { width:10px; height:10px; border-radius:50%; }
@@ -2035,7 +2058,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .friend-card:active { transform:scale(0.98); background:rgba(245,158,11,0.05); border-color:rgba(245,158,11,0.25); }
       .friend-card.offline { opacity:0.4; cursor:default; pointer-events:none; }
       .friend-avatar { width:40px; height:40px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:700; color:#F59E0B; flex-shrink:0; }
-      .friend-name { font-family:'Rajdhani',sans-serif; font-size:0.95rem; font-weight:700; color:#E5E7EB; letter-spacing:0.5px; }
+      .friend-name { font-family:'Rajdhani',sans-serif; font-size:1rem; font-weight:700; color:#F0F4F8; letter-spacing:0.5px; }
       .friend-status-line { font-family:'Rajdhani',sans-serif; font-size:0.68rem; letter-spacing:1px; margin-top:2px; display:flex; align-items:center; gap:5px; }
       .friend-status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
       .dot-online { background:#10B981; box-shadow:0 0 5px #10B981; }
@@ -2047,12 +2070,12 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-slot.has-item { border-color:rgba(245,158,11,0.4); border-style:solid; }
       .trade-slot.their-slot { border-color:rgba(16,185,129,0.25); }
       .trade-slot.their-slot.has-item { border-color:rgba(16,185,129,0.45); border-style:solid; }
-      .trade-slot-label { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:2px; color:#4B5563; }
+      .trade-slot-label { font-family:'Rajdhani',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:2px; color:#9CA3AF; }
       .trade-slot-label.mine { color:#F59E0B; }
       .trade-slot-label.theirs { color:#10B981; }
       .trade-slot-img { width:82px; height:82px; border-radius:8px; overflow:hidden; background:rgba(15,20,28,0.8); }
-      .trade-slot-name { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:600; color:#E5E7EB; text-align:center; line-height:1.2; }
-      .trade-slot-empty { font-family:'Rajdhani',sans-serif; font-size:0.68rem; color:#374151; letter-spacing:1px; text-align:center; flex:1; display:flex; align-items:center; }
+      .trade-slot-name { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; color:#F0F4F8; text-align:center; line-height:1.2; }
+      .trade-slot-empty { font-family:'Rajdhani',sans-serif; font-size:0.72rem; color:#4B5563; letter-spacing:1px; text-align:center; flex:1; display:flex; align-items:center; }
       .trade-pick-btn { width:100%; padding:7px; background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.25); border-radius:7px; color:#F59E0B; font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:1px; cursor:pointer; }
       .trade-pick-btn:active { background:rgba(245,158,11,0.15); }
       .trade-vs-col { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding-top:22px; flex-shrink:0; }
@@ -2073,12 +2096,12 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-picker-card { background:rgba(15,20,28,0.85); border:1px solid rgba(55,65,81,0.3); border-radius:8px; padding:8px 6px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:all 0.15s; }
       .trade-picker-card:active { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.4); transform:scale(0.96); }
       .trade-picker-img { width:52px; height:52px; border-radius:5px; overflow:hidden; background:rgba(10,14,20,0.8); }
-      .trade-picker-name { font-family:'Rajdhani',sans-serif; font-size:0.6rem; font-weight:600; color:#9CA3AF; text-align:center; line-height:1.2; }
+      .trade-picker-name { font-family:'Rajdhani',sans-serif; font-size:0.68rem; font-weight:600; color:#9CA3AF; text-align:center; line-height:1.2; }
       .trade-success-overlay { position:fixed; inset:0; z-index:800; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.88); backdrop-filter:blur(6px); }
       .trade-success-card { background:#080d14; border:1px solid rgba(16,185,129,0.38); border-radius:16px; padding:28px 22px; text-align:center; width:88%; max-width:320px; box-shadow:0 0 60px rgba(16,185,129,0.12); animation:modalPop 0.3s ease; }
       .trade-success-icon { font-size:2.4rem; margin-bottom:8px; }
       .trade-success-title { font-family:'Orbitron',sans-serif; font-size:0.95rem; font-weight:700; color:#10B981; letter-spacing:2px; margin-bottom:5px; }
-      .trade-success-sub { font-family:'Rajdhani',sans-serif; font-size:0.8rem; color:#6B7280; letter-spacing:0.5px; margin-bottom:18px; }
+      .trade-success-sub { font-family:'Rajdhani',sans-serif; font-size:0.82rem; color:#9CA3AF; font-weight:600; letter-spacing:0.5px; margin-bottom:18px; }
       .trade-success-items { display:flex; gap:14px; justify-content:center; align-items:center; margin-bottom:20px; }
       .trade-success-item { display:flex; flex-direction:column; align-items:center; gap:5px; }
       .trade-success-item-img { width:72px; height:72px; border-radius:10px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
@@ -2093,9 +2116,9 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-notif.incoming { border-color:#60A5FA; background:rgba(4,10,22,0.88); }
       .trade-notif-icon { font-size:1rem; line-height:1; flex-shrink:0; margin-top:1px; }
       .trade-notif-body { flex:1; }
-      .trade-notif-title { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:700; color:#E5E7EB; line-height:1.3; }
-      .trade-notif-sub   { font-family:'Rajdhani',sans-serif; font-size:0.65rem; color:#6B7280; letter-spacing:0.5px; margin-top:2px; }
-      .trade-notif-time  { font-family:'Rajdhani',sans-serif; font-size:0.6rem; color:#374151; letter-spacing:1px; flex-shrink:0; }
+      .trade-notif-title { font-family:'Rajdhani',sans-serif; font-size:0.82rem; font-weight:700; color:#F0F4F8; line-height:1.3; }
+      .trade-notif-sub   { font-family:'Rajdhani',sans-serif; font-size:0.7rem; color:#9CA3AF; font-weight:600; letter-spacing:0.5px; margin-top:2px; }
+      .trade-notif-time  { font-family:'Rajdhani',sans-serif; font-size:0.65rem; color:#6B7280; letter-spacing:1px; flex-shrink:0; }
       .trade-notif { cursor:pointer; transition:background 0.15s; }
       .trade-notif:active { background:rgba(20,28,40,0.95); }
       .trade-notif-expand { padding:12px 12px 4px; margin-top:8px; border-top:1px solid rgba(30,42,58,0.8); }
@@ -2103,7 +2126,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-swap-item { display:flex; flex-direction:column; align-items:center; gap:4px; width:110px; }
       .trade-swap-img  { width:62px; height:62px; border-radius:8px; overflow:hidden; background:rgba(15,20,28,0.9); border:1px solid rgba(55,65,81,0.4); }
       .trade-swap-lbl  { font-family:'Rajdhani',sans-serif; font-size:0.58rem; color:#6B7280; letter-spacing:1px; }
-      .trade-swap-name { font-family:'Rajdhani',sans-serif; font-size:0.68rem; fontWeight:600; color:#E5E7EB; text-align:center; line-height:1.2; max-width:80px; }
+      .trade-swap-name { font-family:'Rajdhani',sans-serif; font-size:0.75rem; font-weight:600; color:#F0F4F8; text-align:center; line-height:1.2; max-width:80px; }
       .trade-swap-arrow{ font-family:'Orbitron',sans-serif; font-size:1.2rem; color:#10B981; width:44px; text-align:center; flex-shrink:0; }
       .trade-notif-btn { padding:7px 14px; border-radius:7px; font-family:'Rajdhani',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:1.5px; cursor:pointer; border:1px solid; transition:all 0.15s; }
       .trade-notif-btn.green  { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.35); color:#10B981; }
@@ -2111,11 +2134,11 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
       .trade-notif-btn.amber  { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.35); color:#F59E0B; }
       .trade-notif-btn.ghost  { background:transparent; border-color:rgba(55,65,81,0.3); color:#6B7280; }
       .trade-comment-box { background:rgba(8,12,20,0.8); border:1px solid rgba(40,55,75,0.6); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
-      .trade-comment-msg { font-family:'Rajdhani',sans-serif; font-size:0.75rem; line-height:1.5; margin-bottom:4px; }
+      .trade-comment-msg { font-family:'Rajdhani',sans-serif; font-size:0.78rem; line-height:1.5; margin-bottom:4px; }
       .trade-comment-name-you    { color:#F59E0B; font-weight:700; margin-right:5px; }
       .trade-comment-name-theirs { color:#10B981; font-weight:700; margin-right:5px; }
       .trade-comment-text        { color:#C9D1DC; }
-      .trade-incoming-msg { background:rgba(96,165,250,0.06); border:1px solid rgba(96,165,250,0.18); border-radius:8px; padding:10px 12px; margin-bottom:10px; font-family:'Rajdhani',sans-serif; font-size:0.75rem; color:#C9D1DC; line-height:1.6; }
+      .trade-incoming-msg { background:rgba(96,165,250,0.06); border:1px solid rgba(96,165,250,0.18); border-radius:8px; padding:10px 12px; margin-bottom:10px; font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:#D1D5DB; line-height:1.6; }
       .trade-incoming-from { color:#60A5FA; font-weight:700; font-size:0.68rem; letter-spacing:1px; margin-bottom:4px; }
       .trade-offline-comment-area { width:100%; background:rgba(8,12,20,0.7); border:1px solid rgba(40,55,75,0.5); border-radius:8px; padding:10px 12px; font-family:'Rajdhani',sans-serif; font-size:0.78rem; color:#E5E7EB; resize:none; outline:none; box-sizing:border-box; line-height:1.5; }
       .trade-offline-comment-area::placeholder { color:#374151; }
@@ -3351,8 +3374,6 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
          </div>
        )}
 
-      </div>
-
       {(function(){
         if (!tradeOfferSentToast) return null;
         var sentItem = INVENTORY_DB ? INVENTORY_DB.find(function(i){ return i.name === tradeOfferSentToast.item; }) : null;
@@ -3386,399 +3407,621 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
       {activeTab === 'EVENTS' && (function eventsTab(){
         const allCards = buildEventsDisplay(eventsRawRef.current);
-        const active   = allCards.filter(c => c.active);
-        const upcoming = allCards.filter(c => !c.active && c.diff > 0);
+        const now = Date.now();
+        const midnightToday = new Date(); midnightToday.setHours(23,59,59,999);
+        const midnightMs = midnightToday.getTime();
+        // Pull content up by 16px to cancel main-content top padding, and sideways to cancel side padding
+        // This is applied on the outer wrapper div
+
+        // Filter to TODAY only
+        const todayCards = allCards.filter(c => c.startTime < midnightMs || c.active);
+        const active   = todayCards.filter(c => c.active);
+        const upcoming = todayCards.filter(c => !c.active && c.diff > 0 && c.diff < midnightMs - now);
         const soon     = upcoming.filter(c => c.diff < 3600000);
-        const allMaps  = ['ALL MAPS'];
-        allCards.forEach(c => { if(c.map && allMaps.indexOf(c.map)===-1) allMaps.push(c.map); });
-        const filtered   = eventsFilter==='ALL MAPS' ? upcoming : upcoming.filter(c => c.map===eventsFilter);
-        const filtActive = eventsFilter==='ALL MAPS' ? active   : active.filter(c => c.map===eventsFilter);
-        const attendBase = Math.ceil(Date.now()/3600000)*3600000;
-        const attend = attendList.map((a, idx) => ({...a, startTime: attendBase + [1,6,14][idx%3]*3600000}));
+        const laterToday = upcoming.filter(c => c.diff >= 3600000);
+        const filtActive = eventsFilter==='ALL MAPS' ? active : active.filter(c => c.map===eventsFilter);
+        const filtSoon   = eventsFilter==='ALL MAPS' ? soon   : soon.filter(c => c.map===eventsFilter);
+        const filtLater  = eventsFilter==='ALL MAPS' ? laterToday : laterToday.filter(c => c.map===eventsFilter);
+
+        const allMaps = ['ALL MAPS'];
+        todayCards.forEach(c => { if(c.map && allMaps.indexOf(c.map)===-1) allMaps.push(c.map); });
+
         const fmtTime = ms => { const d=new Date(ms),h=d.getHours(),m=d.getMinutes(); return (h<10?'0'+h:h)+':'+(m<10?'0'+m:m); };
         const cdFull = (ms, raw) => {
-          if(ms<=0) return 'NOW';
+          if(ms<=0) return raw ? {h:0,rm:0,rs:0} : 'NOW';
           const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),rm=m%60,rs=s%60;
-          if (raw) return {h,rm,rs}; // for data-ev-sec
-          return h>0 ? h+'h '+rm+'m '+rs+'s' : m>0 ? rm+'m '+rs+'s' : rs+'s';
+          return raw ? {h,rm,rs} : (h>0 ? h+'h '+rm+'m '+rs+'s' : m>0 ? rm+'m '+rs+'s' : rs+'s');
         };
-        const cdJSX = (ms) => {
+        const cdJSX = ms => {
           if(ms<=0) return <span>NOW</span>;
           const r = cdFull(ms, true);
           const mins = r.h>0 ? r.h+'h '+r.rm+'m' : r.rm+'m';
           return <span>{mins} <span data-ev-sec={r.rs}>{r.rs}s</span></span>;
         };
+
+        // Calendar helpers
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        const getDaysInMonth = (y,m) => new Date(y,m+1,0).getDate();
+        const getFirstDay = (y,m) => new Date(y,m,1).getDay();
+        const todayDate = new Date();
+        const todayNum = todayDate.getDate();
+        const todayMon = todayDate.getMonth();
+        const todayYr  = todayDate.getFullYear();
+
+        // Extract real hourly cycle from live MetaForge data and extrapolate to any date
+        const getEventsForDay = (day, mon, yr) => {
+          const raw = eventsRawRef.current;
+          if (!raw || raw.length === 0) return [];
+
+          // Build hourly schedule from raw data: {hour -> [{name, map, icon}]}
+          const hourlySlots = {};
+          raw.forEach(ev => {
+            const h = new Date(ev.startTime).getHours();
+            if (!hourlySlots[h]) hourlySlots[h] = [];
+            // Avoid duplicates per hour+map combo
+            const key = h+'_'+ev.map+'_'+ev.name;
+            if (!hourlySlots[h].find(s => s.key===key)) {
+              hourlySlots[h].push({key, name:ev.name, map:ev.map, icon:ev.icon, hour:h});
+            }
+          });
+
+          // Extrapolate to requested date — same hourly pattern repeats daily
+          const result = [];
+          Object.values(hourlySlots).forEach(slots => {
+            slots.forEach(slot => {
+              const hr = slot.hour;
+              const pad = n => n<10?'0'+n:''+n;
+              result.push({name:slot.name, map:slot.map, icon:slot.icon, time:pad(hr)+':00', hour:hr});
+            });
+          });
+
+          // Sort by hour
+          result.sort((a,b) => a.hour - b.hour);
+          return result;
+        };
+
+        // Group day events by map
+        const groupByMap = (events) => {
+          const maps = {};
+          events.forEach(ev => {
+            if (!maps[ev.map]) maps[ev.map] = [];
+            maps[ev.map].push(ev);
+          });
+          return maps;
+        };
+
+        const calEventsForDay = calendarSelectedDay
+          ? getEventsForDay(calendarSelectedDay, calendarMonth, calendarYear)
+          : [];
+        const calEventsByMap = groupByMap(calEventsForDay);
+        const calMaps = Object.keys(calEventsByMap).sort();
+
+        // Has events indicator — fast check using raw data existence
+        const dayHasEvents = (d) => eventsRawRef.current && eventsRawRef.current.length > 0;
+
         return (
-          <div style={{paddingBottom:'80px'}}>
+          <div style={{paddingBottom:'80px',paddingLeft:'16px',paddingRight:'16px',marginTop:'-10px'}}>
 
-             {/* Header */}
-             <div style={{marginBottom:'8px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
-               <div>
-                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',letterSpacing:'3px',marginBottom:'3px'}}>LIVE EVENTS</div>
+            {/* Header — normal flow, pulled up with parent wrapper */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px',paddingTop:'4px'}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',letterSpacing:'3px'}}>LIVE EVENTS</div>
+              {eventsLastFetch>0 && <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:eventsError==='demo'?'#6B7280':'#10B981',letterSpacing:'1px',fontWeight:700,border:'1px solid',borderColor:eventsError==='demo'?'rgba(55,65,81,0.4)':'rgba(16,185,129,0.35)',padding:'2px 8px',borderRadius:'4px'}}>{eventsError==='demo'?'DEMO':'LIVE'}</div>}
+            </div>
 
-               </div>
-               {eventsLastFetch>0 && <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color: eventsError==='demo'?'#6B7280':'#10B981',letterSpacing:'1px',fontWeight:700,border:'1px solid',borderColor: eventsError==='demo'?'rgba(55,65,81,0.4)':'rgba(16,185,129,0.35)',padding:'2px 8px',borderRadius:'4px'}}>{eventsError==='demo'?'DEMO · EST':'LIVE'}</div>}
-             </div>
+            {/* Notifications */}
+            <div className="ev-section-bar" onClick={function(){ setEventsNotifsOpen(!eventsNotifsOpen); }} style={{marginBottom:eventsNotifsOpen?'0':'8px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',color:'#F59E0B',fontWeight:700}}>◈</span>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'1px'}}>NOTIFICATIONS</span>
+                {eventsNotifs.length>0 && <span style={{background:'#EF4444',color:'#fff',fontFamily:"'Orbitron',sans-serif",fontSize:'0.52rem',fontWeight:700,padding:'1px 6px',borderRadius:'10px'}}>{eventsNotifs.length}</span>}
+              </div>
+              <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsNotifsOpen?'▲':'▼'}</span>
+            </div>
+            {eventsNotifsOpen && (
+              <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'10px'}}>
+                {eventsNotifs.length===0 && <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#4B5563',textAlign:'center',padding:'12px'}}>No notifications</div>}
+                {eventsNotifs.map(function(n){
+                  const expanded = eventsNotifExpanded===n.id;
+                  const cols = {accepted:{border:'#F59E0B',bg:'rgba(8,18,10,0.9)',icon:'✓',col:'#10B981'},incoming:{border:'#60A5FA',bg:'rgba(6,10,22,0.9)',icon:'◎',col:'#60A5FA'},declined:{border:'#EF4444',bg:'rgba(18,8,8,0.9)',icon:'✕',col:'#EF4444'},sent:{border:'rgba(96,165,250,0.4)',bg:'rgba(6,10,22,0.9)',icon:'◈',col:'#60A5FA'},cancelled:{border:'#EF4444',bg:'rgba(18,8,8,0.9)',icon:'✕',col:'#EF4444'}};
+                  const c = cols[n.type]||cols.sent;
+                  return (
+                    <div key={n.id} style={{background:c.bg,borderLeft:'3px solid '+c.border,borderRadius:'7px',padding:'9px 11px',marginBottom:'6px',cursor:'pointer'}} onClick={function(){ setEventsNotifExpanded(expanded?null:n.id); }}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'7px'}}>
+                          <span style={{color:c.col,fontSize:'0.8rem',fontWeight:700,flexShrink:0}}>{c.icon}</span>
+                          <div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#F0F4F8',lineHeight:1.2}}>
+                              {n.type==='accepted'&&n.username+' accepted your invite'}
+                              {n.type==='incoming'&&n.username+' invited you'}
+                              {n.type==='declined'&&n.username+' declined your invite'}
+                              {n.type==='sent'&&'You invited '+n.username}
+                              {n.type==='cancelled'&&'You cancelled this invitation'}
+                            </div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'1px',fontWeight:600}}>{n.event} · {n.map}{n.time&&n.time!=='–'?' · '+n.time:''}</div>
+                            {n.squad && n.squad.length > 0 && (
+                              <div style={{display:'flex',alignItems:'center',gap:'4px',marginTop:'4px'}}>
+                                <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.52rem',color:'#4B5563',fontWeight:700}}>{1+n.squad.length}/{n.squadMax||3}</span>
+                                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#4B5563'}}>·</span>
+                                {n.squad.map(function(u,i){ return <span key={i} style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#60A5FA',fontWeight:600}}>{u}{i<n.squad.length-1?',':''}</span>; })}
+                                {(1+n.squad.length) < (n.squadMax||3) && <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#374151'}}>· 1 slot open</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280'}}>{n.timeAgo}</span>
+                          <span style={{color:'#4B5563',fontSize:'0.55rem'}}>{expanded?'▲':'▼'}</span>
+                        </div>
+                      </div>
+                      {expanded && (
+                        <div style={{marginTop:'8px',borderTop:'1px solid rgba(30,42,58,0.5)',paddingTop:'8px'}}>
+                          {n.msg && <div style={{background:'rgba(8,12,20,0.7)',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'6px',padding:'7px 10px',marginBottom:'8px'}}><span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:c.col,fontWeight:700}}>{n.username}: </span><span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#C9D1DC'}}>{n.msg}</span></div>}
+                          <div style={{display:'flex',gap:'7px',justifyContent:'flex-end'}}>
+                            {n.type==='incoming' && <button onClick={function(e){ e.stopPropagation(); var snd=new Audio('assets/friend.mp3');snd.volume=1.0;snd.play().catch(function(){}); setEventsAcceptSuccess({username:n.username,event:n.event,map:n.map,time:n.time}); setEventsNotifs(function(prev){return prev.filter(function(x){return x.id!==n.id;});}); setEventsNotifExpanded(null); setTimeout(function(){setEventsAcceptSuccess(null);},3000); }} style={{padding:'5px 11px',background:'rgba(16,185,129,0.12)',border:'1px solid rgba(16,185,129,0.35)',borderRadius:'6px',color:'#10B981',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,cursor:'pointer'}}>ACCEPT</button>}
+                            <button onClick={function(e){ e.stopPropagation(); setEventsNotifs(function(prev){return prev.filter(function(x){return x.id!==n.id;});}); setEventsNotifExpanded(null); }} style={{padding:'5px 11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'6px',color:'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,cursor:'pointer'}}>DISMISS</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
+            {/* WHERE DO I ATTEND */}
+            <div className={'ev-section-bar'+(eventsAttendOpen?'':' ev-attend-bar-pulse')} onClick={function(){ setEventsAttendOpen(!eventsAttendOpen); }} style={{marginBottom:eventsAttendOpen?'0':'10px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',color:'#F59E0B',fontWeight:700}}>◆</span>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'1px'}}>WHERE DO I ATTEND</span>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#9CA3AF',fontWeight:600}}>{attendList.length} events</span>
+              </div>
+              <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsAttendOpen?'▲':'▼'}</span>
+            </div>
+            {eventsAttendOpen && (function(){
+              const attendBase = Math.ceil(Date.now()/3600000)*3600000;
+              const attend = attendList.map((a,idx) => ({...a, startTime: attendBase+[1,6,14][idx%3]*3600000}));
+              return (
+                <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'12px'}}>
+                  {attend.map(function(a){
+                    const diff = a.startTime-Date.now();
+                    const urgency = diff<3600000?'urgent':diff<10800000?'soon':'later';
+                    const col = urgency==='urgent'?'#EF4444':urgency==='soon'?'#F59E0B':'#60A5FA';
+                    return (
+                      <div key={a.id} className={'ev-attend-card ev-attend-'+urgency}>
+                        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                          <div style={{width:'38px',height:'38px',borderRadius:'7px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(55,65,81,0.3)'}}><img src={a.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} /></div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.85rem',fontWeight:700,color:'#F0F4F8'}}>{a.event}</div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'1px',fontWeight:600}}>{a.map}</div>
+                          {a.squad && (
+                            <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'3px'}}>
+                              <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.55rem',fontWeight:700,color: (1+a.squad.length)>=(a.squadMax||3)?'#10B981':'#F59E0B'}}>{1+a.squad.length}/{a.squadMax||3}</span>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#60A5FA',fontWeight:600}}>{a.squad.join(', ')}</span>
+                              {(1+a.squad.length) < (a.squadMax||3) && <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.6rem',color:'#374151'}}>· 1 slot open</span>}
+                            </div>
+                          )}
+                          </div>
+                          <div style={{textAlign:'right',flexShrink:0}}>
+                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.72rem',color:col,fontWeight:700,marginBottom:'2px'}}>{fmtTime(a.startTime)}</div>
+                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:col,opacity:0.85,fontWeight:600}}>{cdJSX(diff)}</div>
+                          </div>
+                        </div>
+                        <div style={{marginTop:'8px',display:'flex',justifyContent:'flex-end'}}>
+                          <button onClick={function(e){ e.stopPropagation(); setEventsCancelTarget(a); setEventsCancelMsg(''); }} style={{padding:'4px 12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'6px',color:'#EF4444',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL EVENT</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
-             {/* ── Notifications Bar ── */}
-             <div className="ev-section-bar" onClick={function(){ setEventsNotifsOpen(!eventsNotifsOpen); }} style={{marginBottom: eventsNotifsOpen?'0':'8px'}}>
-               <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                 <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',color:'#F59E0B',fontWeight:700}}>◈</span>
-                 <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'1px'}}>NOTIFICATIONS</span>
-                 {eventsNotifs.length > 0 && <span style={{background:'#EF4444',color:'#fff',fontFamily:"'Orbitron',sans-serif",fontSize:'0.52rem',fontWeight:700,padding:'1px 6px',borderRadius:'10px'}}>{eventsNotifs.length}</span>}
-               </div>
-               <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsNotifsOpen?'▲':'▼'}</span>
-             </div>
+            {/* Filter */}
+            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'2px',marginBottom:'8px'}}>FILTER BY MAP</div>
+            <div className="events-filter-row" style={{marginBottom:'12px'}}>
+              {allMaps.map(m => <button key={m} className={'events-filter-btn'+(eventsFilter===m?' active':'')} onClick={function(){ setEventsFilter(m); }}>{m}</button>)}
+            </div>
 
-             {eventsNotifsOpen && (
-               <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'10px'}}>
-                 {eventsNotifs.length === 0 && <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#4B5563',textAlign:'center',padding:'12px'}}>No notifications</div>}
-                 {eventsNotifs.map(function(n){
-                   var expanded = eventsNotifExpanded === n.id;
-                   var cols = {accepted:{border:'#F59E0B',bg:'rgba(8,18,10,0.9)',icon:'✓',col:'#10B981'}, incoming:{border:'#60A5FA',bg:'rgba(6,10,22,0.9)',icon:'◎',col:'#60A5FA'}, declined:{border:'#EF4444',bg:'rgba(18,8,8,0.9)',icon:'✕',col:'#EF4444'}, sent:{border:'rgba(96,165,250,0.4)',bg:'rgba(6,10,22,0.9)',icon:'◈',col:'#60A5FA'}, cancelled:{border:'#EF4444',bg:'rgba(18,8,8,0.9)',icon:'✕',col:'#EF4444'}};
-                   var c = cols[n.type] || cols.sent;
-                   return (
-                     <div key={n.id} style={{background:c.bg,borderLeft:'3px solid '+c.border,borderRadius:'7px',padding:'9px 11px',marginBottom:'6px',cursor:'pointer'}} onClick={function(){ setEventsNotifExpanded(expanded?null:n.id); }}>
-                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                         <div style={{display:'flex',alignItems:'center',gap:'7px'}}>
-                           <span style={{color:c.col,fontSize:'0.8rem',fontWeight:700,flexShrink:0}}>{c.icon}</span>
-                           <div>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#E5E7EB',lineHeight:1.2}}>
-                               {n.type==='accepted' && n.username+' accepted your invite'}
-                               {n.type==='incoming' && n.username+' invited you'}
-                               {n.type==='declined' && n.username+' declined your invite'}
-                               {n.type==='sent' && 'You invited '+n.username}
-                               {n.type==='cancelled' && 'You cancelled this invitation'}
-                             </div>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'2px',fontWeight:600}}>{n.event} · {n.map}{n.time&&n.time!=='–'?' · '+n.time:''}</div>
-                           </div>
-                         </div>
-                         <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
-                           <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280'}}>{n.timeAgo}</span>
-                           <span style={{color:'#4B5563',fontSize:'0.55rem'}}>{expanded?'▲':'▼'}</span>
-                         </div>
-                       </div>
-                       {expanded && (
-                         <div style={{marginTop:'8px',borderTop:'1px solid rgba(30,42,58,0.5)',paddingTop:'8px'}}>
-                           {n.msg && (
-                             <div style={{background:'rgba(8,12,20,0.7)',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'6px',padding:'7px 10px',marginBottom:'8px'}}>
-                               <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:c.col,fontWeight:700}}>{n.username}: </span>
-                               <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#C9D1DC'}}>{n.msg}</span>
-                             </div>
-                           )}
-                           <div style={{display:'flex',gap:'7px',justifyContent:'flex-end'}}>
-                             {n.type==='incoming' && (
-                               <button onClick={function(e){ e.stopPropagation();
-                                 var snd=new Audio('assets/friend.mp3'); snd.volume=1.0; snd.play().catch(function(){});
-                                 setEventsAcceptSuccess({username:n.username,event:n.event,map:n.map,time:n.time});
-                                 setEventsNotifs(function(prev){ return prev.filter(function(x){ return x.id!==n.id; }); });
-                                 setEventsNotifExpanded(null);
-                                 setTimeout(function(){ setEventsAcceptSuccess(null); },3000);
-                               }} style={{padding:'5px 11px',background:'rgba(16,185,129,0.12)',border:'1px solid rgba(16,185,129,0.35)',borderRadius:'6px',color:'#10B981',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,cursor:'pointer'}}>ACCEPT</button>
-                             )}
-                             <button onClick={function(e){ e.stopPropagation(); setEventsNotifs(function(prev){ return prev.filter(function(x){ return x.id!==n.id; }); }); setEventsNotifExpanded(null); }}
-                               style={{padding:'5px 11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'6px',color:'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',fontWeight:700,cursor:'pointer'}}>DISMISS</button>
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   );
-                 })}
-               </div>
-             )}
+            {/* ACTIVE NOW */}
+            {filtActive.length>0 && (
+              <>
+                <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                  <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10B981',boxShadow:'0 0 8px #10B981',animation:'evIconPulse 1.5s ease infinite',flexShrink:0}}></div>
+                  <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#10B981',letterSpacing:'3px'}}>ACTIVE NOW</span>
+                </div>
+                <div className="ev-grid" style={{marginBottom:'14px'}}>
+                  {filtActive.map((ev,i) => (
+                    <div key={ev.name+ev.map} className="ev-card-active" style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                      <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                        <div className="ev-icon-wrap-active" style={{flexShrink:0}}>{ev.icon&&<img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#F0F4F8',lineHeight:1.2}}>{ev.name}</div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'2px',fontWeight:600}}>{ev.map}</div>
+                        </div>
+                      </div>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {cdJSX(ev.endTime-Date.now())}</div>
+                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
-             {/* ── Attendance Bar ── */}
-             <div className={'ev-section-bar'+(eventsAttendOpen?'':' ev-attend-bar-pulse')} onClick={function(){ setEventsAttendOpen(!eventsAttendOpen); }} style={{marginBottom: eventsAttendOpen?'0':'10px'}}>
-               <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                 <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',color:'#F59E0B',fontWeight:700}}>◆</span>
-                 <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'1px'}}>WHERE DO I ATTEND</span>
-                 <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#9CA3AF',fontWeight:600}}>{attend.length} events</span>
-               </div>
-               <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsAttendOpen?'▲':'▼'}</span>
-             </div>
+            {/* UPCOMING NEXT */}
+            {filtSoon.length>0 && (
+              <>
+                <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                  <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#60A5FA',boxShadow:'0 0 6px #60A5FA',animation:'evIconPulse 2s ease infinite',flexShrink:0}}></div>
+                  <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#60A5FA',letterSpacing:'3px'}}>UPCOMING NEXT</span>
+                </div>
+                <div className="ev-grid" style={{marginBottom:'14px'}}>
+                  {filtSoon.map((ev,i) => (
+                    <div key={ev.name+ev.map} className="ev-card-soon" style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                      <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                        <div className="ev-icon-wrap-soon" style={{flexShrink:0}}>{ev.icon&&<img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#C9D1DC',lineHeight:1.2}}>{ev.name}</div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'2px',fontWeight:600}}>{ev.map}</div>
+                        </div>
+                      </div>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{cdJSX(ev.diff)}</div>
+                        <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
-             {eventsAttendOpen && (
-               <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'12px'}}>
-                 {attend.map(function(a){
-                   var diff = a.startTime - Date.now();
-                   var urgency = diff < 3600000 ? 'urgent' : diff < 10800000 ? 'soon' : 'later';
-                   var col = urgency==='urgent'?'#EF4444':urgency==='soon'?'#F59E0B':'#60A5FA';
-                   return (
-                     <div key={a.id} className={'ev-attend-card ev-attend-'+urgency}>
-                       <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                         <div style={{width:'38px',height:'38px',borderRadius:'7px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(55,65,81,0.3)'}}>
-                           <img src={a.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />
-                         </div>
-                         <div style={{flex:1,minWidth:0}}>
-                           <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.85rem',fontWeight:700,color:'#F0F4F8',lineHeight:1.2}}>{a.event}</div>
-                           <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'3px',fontWeight:600}}>{a.map} · with {a.username}</div>
-                         </div>
-                         <div style={{textAlign:'right',flexShrink:0}}>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.72rem',color:col,fontWeight:700,marginBottom:'3px'}}>{fmtTime(a.startTime)}</div>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:col,opacity:0.85,fontWeight:600}}>{cdJSX(diff)}</div>
-                         </div>
-                       </div>
-                       <div style={{marginTop:'8px',display:'flex',justifyContent:'flex-end'}}>
-                         <button onClick={function(e){ e.stopPropagation(); setEventsCancelTarget(a); setEventsCancelMsg(''); }}
-                           style={{padding:'4px 12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'6px',color:'#EF4444',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>
-                           CANCEL EVENT
-                         </button>
-                       </div>
-                     </div>
-                   );
-                 })}
-               </div>
-             )}
+            {/* LATER TODAY collapsible */}
+            {filtLater.length>0 && (
+              <>
+                <div className="ev-section-bar" onClick={function(){ setEventsLaterOpen(!eventsLaterOpen); }} style={{marginBottom:eventsLaterOpen?'0':'10px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                    <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.7rem',color:'#6B7280',fontWeight:700}}>◇</span>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB',letterSpacing:'1px'}}>LATER TODAY</span>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',fontWeight:600}}>{filtLater.length} events</span>
+                  </div>
+                  <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsLaterOpen?'▲':'▼'}</span>
+                </div>
+                {eventsLaterOpen && (
+                  <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'12px'}}>
+                    {filtLater.map((ev,i) => (
+                      <div key={ev.name+ev.map+i} className="ev-list-card" style={{marginBottom:'6px'}}>
+                        <div className="ev-list-header">
+                          <div className="ev-icon-wrap-later" style={{flexShrink:0}}>{ev.icon&&<img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#9CA3AF',lineHeight:1.2}}>{ev.name}</div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',marginTop:'1px',fontWeight:600}}>{ev.map} · {fmtTime(ev.startTime)}</div>
+                          </div>
+                          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px',flexShrink:0}}>
+                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{cdJSX(ev.diff)}</div>
+                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
 
-             {/* Active events */}
-             {filtActive.length > 0 && (
-               <>
-                 <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
-                   <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10B981',boxShadow:'0 0 8px #10B981',animation:'evIconPulse 1.5s ease infinite',flexShrink:0}}></div>
-                   <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#10B981',letterSpacing:'3px'}}>ACTIVE NOW</span>
-                 </div>
-                 <div className="ev-grid" style={{marginBottom:'16px'}}>
-                   {filtActive.map(function(ev,i){
-                     return (
-                       <div key={ev.name+ev.map} className="ev-card-active" style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-                         <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-                           <div className="ev-icon-wrap-active" style={{flexShrink:0}}>
-                             {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
-                           </div>
-                           <div style={{flex:1,minWidth:0}}>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#F0F4F8',lineHeight:1.2}}>{ev.name}</div>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'2px',fontWeight:600}}>{ev.map}</div>
-                           </div>
-                         </div>
-                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {cdJSX(ev.diff<0?ev.endTime-Date.now():ev.diff)}</div>
-                           <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               </>
-             )}
+            {/* CALENDAR */}
+            <div ref={calendarRef} style={{marginTop:'16px',background:'rgba(8,11,18,0.92)',border:'1px solid rgba(40,55,70,0.5)',borderRadius:'12px',overflow:'hidden'}}>
+              {/* 7-day strip — today + next 6 days */}
+              <div style={{display:'flex',gap:'4px',padding:'10px 10px 8px',overflowX:'auto',scrollbarWidth:'none'}}>
+                {Array.from({length:7}).map(function(_,i){
+                  const d = new Date(todayYr,todayMon,todayNum+i);
+                  const dayNum = d.getDate();
+                  const dayMon = d.getMonth();
+                  const dayYr  = d.getFullYear();
+                  const isToday = i===0;
+                  const isSelected = calendarSelectedDay===dayNum && calendarMonth===dayMon && calendarYear===dayYr;
+                  const WEEKDAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+                  const weekday = WEEKDAYS[d.getDay()];
+                  return (
+                    <div key={i} onClick={function(){
+                      setCalendarSelectedDay(isSelected?null:dayNum);
+                      setCalendarMonth(dayMon);
+                      setCalendarYear(dayYr);
+                      setCalendarOpenMaps({});
+                      if (!isSelected && calendarRef.current) {
+                        setTimeout(function(){ calendarRef.current.scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
+                      }
+                    }} style={{
+                      flex:'0 0 auto',width:'calc((100% - 6*4px) / 7)',
+                      textAlign:'center',padding:'8px 2px',borderRadius:'8px',cursor:'pointer',
+                      background: isSelected?'rgba(245,158,11,0.2)':isToday?'rgba(245,158,11,0.08)':'rgba(10,14,22,0.6)',
+                      border: isSelected?'1px solid rgba(245,158,11,0.6)':isToday?'1px solid rgba(245,158,11,0.3)':'1px solid rgba(35,45,60,0.4)',
+                    }}>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.58rem',fontWeight:700,color:isSelected?'#F59E0B':isToday?'#F59E0B':'#6B7280',letterSpacing:'0.5px',marginBottom:'2px'}}>{weekday}</div>
+                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:isSelected?'#F59E0B':isToday?'#F59E0B':'#C9D1DC'}}>{dayNum}</div>
+                      <div style={{width:'4px',height:'4px',borderRadius:'50%',background:isSelected?'#F59E0B':'#60A5FA',margin:'3px auto 0',opacity: dayHasEvents(dayNum)?1:0}}></div>
+                    </div>
+                  );
+                })}
+              </div>
 
-             {/* Upcoming next */}
-             {soon.filter(function(c){ return eventsFilter==='ALL MAPS'||c.map===eventsFilter; }).length > 0 && (
-               <>
-                 <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
-                   <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#60A5FA',boxShadow:'0 0 6px #60A5FA',animation:'evIconPulse 2s ease infinite',flexShrink:0}}></div>
-                   <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#60A5FA',letterSpacing:'3px'}}>UPCOMING NEXT</span>
-                 </div>
-                 <div className="ev-grid" style={{marginBottom:'16px'}}>
-                   {soon.filter(function(c){ return eventsFilter==='ALL MAPS'||c.map===eventsFilter; }).map(function(ev,i){
-                     return (
-                       <div key={ev.name+ev.map} className="ev-card-soon" style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-                         <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-                           <div className="ev-icon-wrap-soon" style={{flexShrink:0}}>
-                             {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
-                           </div>
-                           <div style={{flex:1,minWidth:0}}>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',fontWeight:700,color:'#C9D1DC',lineHeight:1.2}}>{ev.name}</div>
-                             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#9CA3AF',marginTop:'2px',fontWeight:600}}>{ev.map}</div>
-                           </div>
-                         </div>
-                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{cdJSX(ev.diff)}</div>
-                           <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               </>
-             )}
+              {/* Selected day events — grouped by map */}
+              {calendarSelectedDay && (
+                <div style={{borderTop:'1px solid rgba(30,42,58,0.6)',padding:'10px 12px'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.65rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px'}}>
+                      {MONTHS[calendarMonth].toUpperCase()} {calendarSelectedDay}
+                    </div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',fontWeight:600}}>
+                      {calEventsForDay.length} events · {calMaps.length} maps
+                    </div>
+                  </div>
+                  {calEventsForDay.length===0
+                    ? <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#4B5563',textAlign:'center',padding:'8px'}}>
+                        {eventsRawRef.current && eventsRawRef.current.length>0 ? 'No events found' : 'Loading event data…'}
+                      </div>
+                    : calMaps.map(map => {
+                        const mapEvs = calEventsByMap[map];
+                        const mapOpen = calendarOpenMaps[map] === true; // default closed
+                        const mapIcon = mapEvs[0] && mapEvs[0].icon;
+                        return (
+                          <div key={map} style={{marginBottom:'8px',background:'rgba(6,10,18,0.7)',border:'1px solid rgba(35,48,65,0.5)',borderRadius:'9px',overflow:'hidden'}}>
+                            {/* Map header */}
+                            <div onClick={function(){ setCalendarOpenMaps(function(prev){ const n={...prev}; n[map]=!mapOpen; return n; }); }}
+                              style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',cursor:'pointer',background:mapOpen?'rgba(245,158,11,0.04)':'transparent'}}>
+                              <div style={{width:'28px',height:'28px',borderRadius:'5px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(245,158,11,0.2)',background:'rgba(8,12,20,0.8)'}}>
+                                {mapIcon && <img src={mapIcon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                              </div>
+                              <div style={{flex:1}}>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#F0F4F8',letterSpacing:'0.5px'}}>{map}</div>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',fontWeight:600}}>{mapEvs.length} event{mapEvs.length>1?'s':''}</div>
+                              </div>
+                              <span style={{color:'#4B5563',fontSize:'0.7rem'}}>{mapOpen?'▲':'▼'}</span>
+                            </div>
+                            {/* Events for this map */}
+                            {mapOpen && (
+                              <div style={{borderTop:'1px solid rgba(30,42,58,0.4)'}}>
+                                {mapEvs.map((ev,i) => (
+                                  <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderBottom:i<mapEvs.length-1?'1px solid rgba(25,35,50,0.5)':'none',background:i%2===0?'rgba(8,12,22,0.4)':'transparent'}}>
+                                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:'#F59E0B',fontWeight:700,flexShrink:0,minWidth:'36px'}}>{ev.time}</div>
+                                    <div style={{width:'28px',height:'28px',borderRadius:'5px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(55,65,81,0.3)'}}>
+                                      {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                                    </div>
+                                    <div style={{flex:1,minWidth:0}}>
+                                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#E5E7EB'}}>{ev.name}</div>
+                                    </div>
+                                    <button onClick={function(){ setCalendarInviteTarget(ev); setCalendarInviteSelected(null); setCalendarInviteMsg(''); setCalendarShowFriendPicker(false); }}
+                                      className="ev-invite-btn" style={{flexShrink:0}}>+ INVITE</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                  }
+                </div>
+              )}
+            </div>
 
-             {/* Filter */}
-             <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'2px',marginBottom:'8px'}}>FILTER BY MAP</div>
-             <div className="events-filter-row" style={{marginBottom:'14px'}}>
-               {allMaps.map(function(m){ return <button key={m} className={'events-filter-btn'+(eventsFilter===m?' active':'')} onClick={function(){ setEventsFilter(m); }}>{m}</button>; })}
-             </div>
+            {/* ── Calendar Invite Modal ── */}
+            {calendarInviteTarget && (
+              <div style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={function(){ if(!calendarShowFriendPicker) setCalendarInviteTarget(null); setCalendarShowFriendPicker(false); }}>
+                <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}} onClick={function(e){e.stopPropagation();}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'4px'}}>INVITE TO EVENT</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#C9D1DC',marginBottom:'16px'}}>{calendarInviteTarget.name} · {calendarInviteTarget.map} · <span style={{color:'#F59E0B'}}>{calendarInviteTarget.time || calendarInviteTarget.timeRange}</span></div>
+                  <div style={{marginBottom:'14px',position:'relative'}}>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>SELECT FRIEND</div>
+                    <button onClick={function(){ setCalendarShowFriendPicker(!calendarShowFriendPicker); }} style={{width:'100%',padding:'9px 12px',background:'rgba(15,20,28,0.8)',border:'1px solid rgba(55,65,81,0.45)',borderRadius:'8px',color:calendarInviteSelected?'#E5E7EB':'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:600,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',textAlign:'left'}}>
+                      <span>{calendarInviteSelected?calendarInviteSelected.username:'Choose a friend…'}</span>
+                      <span style={{color:'#4B5563'}}>{calendarShowFriendPicker?'▲':'▼'}</span>
+                    </button>
+                    {calendarShowFriendPicker && (
+                      <div className="ev-friend-picker" style={{top:'100%',marginTop:'4px'}}>
+                        {TRADE_FRIENDS.map(f => (
+                          <div key={f.id} className="ev-friend-row" onClick={function(){ setCalendarInviteSelected(f); setCalendarShowFriendPicker(false); }}>
+                            <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',flexShrink:0}}>{f.username[0]}</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB'}}>{f.username}</div>
+                              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:f.status==='online'?'#10B981':f.status==='away'?'#F59E0B':'#4B5563'}}>{f.status.toUpperCase()} · {f.rank}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{marginBottom:'18px'}}>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>MESSAGE (OPTIONAL)</div>
+                    <textarea value={calendarInviteMsg} onChange={function(e){ setCalendarInviteMsg(e.target.value); }} placeholder="e.g. Mark this one in the diary!"
+                      style={{width:'100%',background:'rgba(8,12,20,0.7)',border:'1px solid rgba(40,55,75,0.5)',borderRadius:'8px',padding:'10px 12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#E5E7EB',resize:'none',outline:'none',boxSizing:'border-box',lineHeight:1.5,height:'68px'}} />
+                  </div>
+                  <div style={{display:'flex',gap:'10px'}}>
+                    <button onClick={function(){
+                      if(!calendarInviteSelected) return;
+                      var snd=new Audio('assets/friend.mp3');snd.volume=1.0;snd.play().catch(function(){});
+                      var tgt=calendarInviteTarget; var frnd=calendarInviteSelected;
+                      setCalendarInviteTarget(null);
+                      setCalendarInviteSuccess({username:frnd.username,event:tgt.name,map:tgt.map,time:tgt.time||tgt.timeRange,day:calendarSelectedDay,month:MONTHS[calendarMonth]});
+                      setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:frnd.username,event:tgt.name,map:tgt.map,time:tgt.time||'',timeAgo:'Just now',msg:''}].concat(prev); });
+                      setTimeout(function(){setCalendarInviteSuccess(null);},3500);
+                    }} style={{flex:1,padding:'11px',background:calendarInviteSelected?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(calendarInviteSelected?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color:calendarInviteSelected?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:calendarInviteSelected?'pointer':'default'}}>
+                      {calendarInviteSelected?'SEND INVITE · '+(calendarInviteTarget.time||''):'SEND INVITE'}
+                    </button>
+                    <button onClick={function(){ setCalendarInviteTarget(null); setCalendarShowFriendPicker(false); }} style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-             {/* Full list */}
-             {filtered.map(function(ev,i){
-               return (
-                 <div key={ev.name+ev.map+i} className="ev-list-card">
-                   <div className="ev-list-header">
-                     <div className="ev-icon-wrap-later" style={{flexShrink:0}}>
-                       {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
-                     </div>
-                     <div style={{flex:1,minWidth:0}}>
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#9CA3AF',lineHeight:1.2}}>{ev.name}</div>
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',marginTop:'1px',fontWeight:600}}>{ev.map}</div>
-                     </div>
-                     <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px',flexShrink:0}}>
-                       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{cdJSX(ev.diff)}</div>
-                       <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteFriend(null); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
-                     </div>
-                   </div>
-                   <div className="ev-list-instances">
-                     <div className="ev-inst-row">
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#374151'}}>{ev.timeRange}</div>
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#2D3748'}}>{ev.map}</div>
-                     </div>
-                   </div>
-                 </div>
-               );
-             })}
+            {/* Calendar Invite Success */}
+            {calendarInviteSuccess && (
+              <div className="trade-success-overlay" style={{zIndex:9100}}>
+                <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',boxShadow:'0 0 60px rgba(245,158,11,0.12)',textAlign:'center'}}>
+                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>⚡</div>
+                  <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
+                  <div className="trade-success-sub">{calendarInviteSuccess.username} invited to</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{calendarInviteSuccess.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'4px'}}>{calendarInviteSuccess.map}</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.7rem',color:'#F59E0B',marginBottom:'20px'}}>{calendarInviteSuccess.month} {calendarInviteSuccess.day} · {calendarInviteSuccess.time}</div>
+                  <button className="trade-success-more" style={{background:'rgba(245,158,11,0.1)',borderColor:'rgba(245,158,11,0.32)',color:'#F59E0B'}} onClick={function(){setCalendarInviteSuccess(null);}}>BACK TO EVENTS</button>
+                </div>
+              </div>
+            )}
 
+            {/* Existing modals: invite, accept success, cancel, reminder */}
+            {eventsInviteTarget && (function(){
+              const ev = eventsInviteTarget;
+              const evtTime = (function(){ var d=new Date(ev.startTime||Date.now()); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
+              return (
+                <div style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={function(){ if(!eventsShowFriendPicker){setEventsInviteTarget(null);} setEventsShowFriendPicker(false); }}>
+                  <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}} onClick={function(e){e.stopPropagation();}}>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'4px'}}>INVITE TO EVENT</div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#C9D1DC',marginBottom:'16px'}}>{ev.name} · {ev.map} · <span style={{color:'#F59E0B'}}>{evtTime}</span></div>
+                    <div style={{marginBottom:'14px',position:'relative'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px'}}>SELECT FRIENDS (MAX 2)</div>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280'}}>{eventsInviteSelected.length}/2</div>
+                      </div>
+                      {eventsInviteSelected.length > 0 && (
+                        <div style={{display:'flex',gap:'6px',marginBottom:'8px',flexWrap:'wrap'}}>
+                          {eventsInviteSelected.map(function(f){ return (
+                            <div key={f.id} style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'20px',padding:'3px 8px 3px 6px'}}>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',fontWeight:700,color:'#F59E0B'}}>{f.username}</span>
+                              <span onClick={function(){ setEventsInviteSelected(function(prev){ return prev.filter(function(x){ return x.id!==f.id; }); }); }} style={{color:'#F59E0B',cursor:'pointer',fontSize:'0.7rem',lineHeight:1}}>×</span>
+                            </div>
+                          ); })}
+                        </div>
+                      )}
+                      {eventsInviteSelected.length < 2 && (
+                        <button onClick={function(){ setEventsShowFriendPicker(!eventsShowFriendPicker); }} style={{width:'100%',padding:'9px 12px',background:'rgba(15,20,28,0.8)',border:'1px solid rgba(55,65,81,0.45)',borderRadius:'8px',color:'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:600,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',textAlign:'left'}}>
+                          <span>Add a friend…</span>
+                          <span style={{color:'#4B5563'}}>{eventsShowFriendPicker?'▲':'▼'}</span>
+                        </button>
+                      )}
+                      {eventsShowFriendPicker && (
+                        <div className="ev-friend-picker" style={{top:'100%',marginTop:'4px'}}>
+                          {TRADE_FRIENDS.map(f => (
+                            <div key={f.id} className="ev-friend-row" onClick={function(){ if(eventsInviteSelected.length<2 && !eventsInviteSelected.find(function(x){return x.id===f.id;})){ setEventsInviteSelected(function(prev){ return [...prev,f]; }); } setEventsShowFriendPicker(false); }}>
+                              <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',flexShrink:0}}>{f.username[0]}</div>
+                              <div style={{flex:1}}>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB'}}>{f.username}</div>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:f.status==='online'?'#10B981':f.status==='away'?'#F59E0B':'#4B5563'}}>{f.status.toUpperCase()} · {f.rank}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{marginBottom:'18px'}}>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>MESSAGE (OPTIONAL)</div>
+                      <textarea value={eventsInviteMsg} onChange={function(e){ setEventsInviteMsg(e.target.value); }} placeholder="e.g. Join me, gonna be wild!" style={{width:'100%',background:'rgba(8,12,20,0.7)',border:'1px solid rgba(40,55,75,0.5)',borderRadius:'8px',padding:'10px 12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#E5E7EB',resize:'none',outline:'none',boxSizing:'border-box',lineHeight:1.5,height:'68px'}} />
+                    </div>
+                    <div style={{display:'flex',gap:'10px'}}>
+                      <button onClick={function(){
+                        if(!eventsInviteSelected.length) return;
+                        var snd=new Audio('assets/friend.mp3');snd.volume=1.0;snd.play().catch(function(){});
+                        var tgt=eventsInviteTarget; var frnd=eventsInviteSelected[0];
+                        var tm=(function(){ var d=new Date(tgt.startTime||Date.now()); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
+                        setEventsInviteTarget(null);
+                        setEventsInviteSuccess({username:frnd.username,event:tgt.name,map:tgt.map,time:tm});
+                        setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:frnd.username,event:tgt.name,map:tgt.map,time:tm,timeAgo:'Just now',msg:''}].concat(prev); });
+                        setTimeout(function(){setEventsInviteSuccess(null);},3500);
+                      }} style={{flex:1,padding:'11px',background:eventsInviteSelected.length?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(eventsInviteSelected.length?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color:eventsInviteSelected.length?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:eventsInviteSelected?'pointer':'default'}}>
+                        {eventsInviteSelected.length>0?'SEND INVITE · '+evtTime+' ('+eventsInviteSelected.length+')':'SEND INVITE'}
+                      </button>
+                      <button onClick={function(){ setEventsInviteTarget(null); setEventsShowFriendPicker(false); setEventsInviteSelected([]); }} style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
+            {eventsAcceptSuccess && (
+              <div className="trade-success-overlay" style={{zIndex:9100}}>
+                <div className="trade-success-card" style={{borderColor:'rgba(96,165,250,0.38)',textAlign:'center'}}>
+                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>🤝</div>
+                  <div className="trade-success-title" style={{color:'#60A5FA',marginBottom:'5px'}}>INVITE ACCEPTED</div>
+                  <div className="trade-success-sub">You accepted {eventsAcceptSuccess.username}'s invite to</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsAcceptSuccess.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsAcceptSuccess.map} · {eventsAcceptSuccess.time}</div>
+                  <button className="trade-success-more" style={{background:'rgba(96,165,250,0.1)',borderColor:'rgba(96,165,250,0.32)',color:'#60A5FA'}} onClick={function(){setEventsAcceptSuccess(null);}}>BACK TO EVENTS</button>
+                </div>
+              </div>
+            )}
 
-             {/* ── Invite Modal ── */}
-             {eventsInviteTarget && (function(){
-               var ev = eventsInviteTarget;
-               var evtTime = (function(){ var d=new Date(ev.startTime||Date.now()); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
-               return (
-                 <div style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={function(){ if(!eventsShowFriendPicker){setEventsInviteTarget(null);} setEventsShowFriendPicker(false); }}>
-                   <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}} onClick={function(e){e.stopPropagation();}}>
-                     <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'4px'}}>INVITE TO EVENT</div>
-                     <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#C9D1DC',marginBottom:'16px'}}>{ev.name} · {ev.map} · <span style={{color:'#F59E0B'}}>{evtTime}</span></div>
-                     <div style={{marginBottom:'14px',position:'relative'}}>
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>SELECT FRIEND</div>
-                       <button onClick={function(){ setEventsShowFriendPicker(!eventsShowFriendPicker); }}
-                         style={{width:'100%',padding:'9px 12px',background:'rgba(15,20,28,0.8)',border:'1px solid rgba(55,65,81,0.45)',borderRadius:'8px',color: eventsInviteFriend?'#E5E7EB':'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:600,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',textAlign:'left'}}>
-                         <span>{eventsInviteFriend ? eventsInviteFriend.username : 'Choose a friend…'}</span>
-                         <span style={{color:'#4B5563'}}>{eventsShowFriendPicker?'▲':'▼'}</span>
-                       </button>
-                       {eventsShowFriendPicker && (
-                         <div className="ev-friend-picker" style={{top:'100%',marginTop:'4px'}}>
-                           {TRADE_FRIENDS.map(function(f){
-                             return (
-                               <div key={f.id} className="ev-friend-row" onClick={function(){ setEventsInviteFriend(f); setEventsShowFriendPicker(false); }}>
-                                 <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',flexShrink:0}}>{f.username[0]}</div>
-                                 <div style={{flex:1}}>
-                                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB'}}>{f.username}</div>
-                                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color: f.status==='online'?'#10B981':f.status==='away'?'#F59E0B':'#4B5563'}}>{f.status.toUpperCase()} · {f.rank}</div>
-                                 </div>
-                               </div>
-                             );
-                           })}
-                         </div>
-                       )}
-                     </div>
-                     <div style={{marginBottom:'18px'}}>
-                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>MESSAGE (OPTIONAL)</div>
-                       <textarea value={eventsInviteMsg} onChange={function(e){ setEventsInviteMsg(e.target.value); }} placeholder="e.g. Join me, gonna be wild!"
-                         style={{width:'100%',background:'rgba(8,12,20,0.7)',border:'1px solid rgba(40,55,75,0.5)',borderRadius:'8px',padding:'10px 12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#E5E7EB',resize:'none',outline:'none',boxSizing:'border-box',lineHeight:1.5,height:'68px'}} />
-                     </div>
-                     <div style={{display:'flex',gap:'10px'}}>
-                       <button onClick={function(){
-                         if (!eventsInviteFriend) return;
-                         var snd=new Audio('assets/friend.mp3'); snd.volume=1.0; snd.play().catch(function(){});
-                         var tgt=eventsInviteTarget; var frnd=eventsInviteFriend;
-                         var tm = (function(){ var d=new Date(tgt.startTime||Date.now()); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
-                         setEventsInviteTarget(null);
-                         setEventsInviteSuccess({username:frnd.username,event:tgt.name,map:tgt.map,time:tm});
-                         setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:frnd.username,event:tgt.name,map:tgt.map,time:tm,timeAgo:'Just now',msg:''}].concat(prev); });
-                         setTimeout(function(){ setEventsInviteSuccess(null); },3500);
-                       }} style={{flex:1,padding:'11px',background: eventsInviteFriend?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(eventsInviteFriend?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color: eventsInviteFriend?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor: eventsInviteFriend?'pointer':'default'}}>
-                         {eventsInviteFriend ? 'SEND INVITE · '+evtTime : 'SEND INVITE'}
-                       </button>
-                       <button onClick={function(){ setEventsInviteTarget(null); setEventsShowFriendPicker(false); }}
-                         style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL</button>
-                     </div>
-                   </div>
-                 </div>
-               );
-             })()}
+            {eventsInviteSuccess && (
+              <div className="trade-success-overlay" style={{zIndex:9100}}>
+                <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',textAlign:'center'}}>
+                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>⚡</div>
+                  <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
+                  <div className="trade-success-sub">{eventsInviteSuccess.username} has been invited to</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsInviteSuccess.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsInviteSuccess.map} · {eventsInviteSuccess.time}</div>
+                  <button className="trade-success-more" style={{background:'rgba(245,158,11,0.1)',borderColor:'rgba(245,158,11,0.32)',color:'#F59E0B'}} onClick={function(){setEventsInviteSuccess(null);}}>BACK TO EVENTS</button>
+                </div>
+              </div>
+            )}
 
-             {/* ── Accept Success Popup ── */}
-             {eventsAcceptSuccess && (
-               <div className="trade-success-overlay" style={{zIndex:9100}}>
-                 <div className="trade-success-card" style={{borderColor:'rgba(96,165,250,0.38)',boxShadow:'0 0 60px rgba(96,165,250,0.12)',textAlign:'center'}}>
-                   <div style={{fontSize:'2rem',marginBottom:'8px'}}>🤝</div>
-                   <div className="trade-success-title" style={{color:'#60A5FA',marginBottom:'5px'}}>INVITE ACCEPTED</div>
-                   <div className="trade-success-sub">You accepted {eventsAcceptSuccess.username}'s invite to</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsAcceptSuccess.event}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsAcceptSuccess.map} · {eventsAcceptSuccess.time}</div>
-                   <button className="trade-success-more" style={{background:'rgba(96,165,250,0.1)',borderColor:'rgba(96,165,250,0.32)',color:'#60A5FA'}} onClick={function(){ setEventsAcceptSuccess(null); }}>BACK TO EVENTS</button>
-                 </div>
-               </div>
-             )}
+            {eventsCancelTarget && (
+              <div style={{position:'fixed',inset:0,zIndex:9300,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{background:'#080d14',border:'1px solid rgba(239,68,68,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#EF4444',letterSpacing:'2px',marginBottom:'6px'}}>CANCEL EVENT</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.8rem',color:'#C9D1DC',marginBottom:'4px'}}>{eventsCancelTarget.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#6B7280',marginBottom:'16px'}}>{eventsCancelTarget.map} · with {eventsCancelTarget.username}</div>
+                  <div style={{marginBottom:'16px'}}>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>LEAVE A MESSAGE (OPTIONAL)</div>
+                    <textarea value={eventsCancelMsg} onChange={function(e){ setEventsCancelMsg(e.target.value); }} placeholder="e.g. Sorry, something came up!" style={{width:'100%',background:'rgba(8,12,20,0.7)',border:'1px solid rgba(40,55,75,0.5)',borderRadius:'8px',padding:'10px 12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#E5E7EB',resize:'none',outline:'none',boxSizing:'border-box',lineHeight:1.5,height:'68px'}} />
+                  </div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',marginBottom:'18px',textAlign:'center'}}>Are you sure you want to cancel?</div>
+                  <div style={{display:'flex',gap:'10px'}}>
+                    <button onClick={function(){
+                      var sndC=new Audio('assets/friend.mp3');sndC.volume=0.8;sndC.play().catch(function(){});
+                      var tgt=eventsCancelTarget;
+                      var cancelTime=(function(){ if(!tgt.startTime) return '–'; var d=new Date(tgt.startTime); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
+                      setAttendList(function(prev){return prev.filter(function(a){return a.id!==tgt.id;});});
+                      setEventsNotifs(function(prev){return [{id:Date.now(),type:'cancelled',username:tgt.username,event:tgt.event,map:tgt.map,time:cancelTime,timeAgo:'Just now',msg:eventsCancelMsg||''}].concat(prev);});
+                      setEventsCancelTarget(null);
+                      setEventsCancelSuccess({event:tgt.event,map:tgt.map,username:tgt.username});
+                      setTimeout(function(){setEventsCancelSuccess(null);},3000);
+                    }} style={{flex:1,padding:'11px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.35)',borderRadius:'8px',color:'#EF4444',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>YES, CANCEL</button>
+                    <button onClick={function(){setEventsCancelTarget(null);}} style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>NO, KEEP IT</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-             {/* ── Invite Sent Success ── */}
-             {eventsInviteSuccess && (
-               <div className="trade-success-overlay" style={{zIndex:9100}}>
-                 <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',boxShadow:'0 0 60px rgba(245,158,11,0.12)',textAlign:'center'}}>
-                   <div style={{fontSize:'2rem',marginBottom:'8px'}}>⚡</div>
-                   <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
-                   <div className="trade-success-sub">{eventsInviteSuccess.username} has been invited to</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsInviteSuccess.event}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsInviteSuccess.map} · {eventsInviteSuccess.time}</div>
-                   <button className="trade-success-more" style={{background:'rgba(245,158,11,0.1)',borderColor:'rgba(245,158,11,0.32)',color:'#F59E0B'}} onClick={function(){ setEventsInviteSuccess(null); }}>BACK TO EVENTS</button>
-                 </div>
-               </div>
-             )}
+            {eventsCancelSuccess && (
+              <div className="trade-success-overlay" style={{zIndex:9300}}>
+                <div className="trade-success-card" style={{borderColor:'rgba(239,68,68,0.38)',textAlign:'center'}}>
+                  <div style={{fontSize:'2rem',marginBottom:'8px'}}>✕</div>
+                  <div className="trade-success-title" style={{color:'#EF4444',marginBottom:'5px'}}>EVENT CANCELLED</div>
+                  <div className="trade-success-sub">You have cancelled</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsCancelSuccess.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsCancelSuccess.map} · with {eventsCancelSuccess.username}</div>
+                  <button className="trade-success-more" style={{background:'rgba(239,68,68,0.08)',borderColor:'rgba(239,68,68,0.3)',color:'#EF4444'}} onClick={function(){setEventsCancelSuccess(null);}}>BACK TO EVENTS</button>
+                </div>
+              </div>
+            )}
 
-             {/* ── Cancel Confirm Modal ── */}
-             {eventsCancelTarget && (
-               <div style={{position:'fixed',inset:0,zIndex:9300,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                 <div style={{background:'#080d14',border:'1px solid rgba(239,68,68,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}}>
-                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.72rem',fontWeight:700,color:'#EF4444',letterSpacing:'2px',marginBottom:'6px'}}>CANCEL EVENT</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.8rem',color:'#C9D1DC',marginBottom:'4px'}}>{eventsCancelTarget.event}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.68rem',color:'#6B7280',marginBottom:'16px'}}>{eventsCancelTarget.map} · with {eventsCancelTarget.username}</div>
-                   <div style={{marginBottom:'16px'}}>
-                     <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>LEAVE A MESSAGE (OPTIONAL)</div>
-                     <textarea value={eventsCancelMsg} onChange={function(e){ setEventsCancelMsg(e.target.value); }} placeholder="e.g. Sorry, something came up!"
-                       style={{width:'100%',background:'rgba(8,12,20,0.7)',border:'1px solid rgba(40,55,75,0.5)',borderRadius:'8px',padding:'10px 12px',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#E5E7EB',resize:'none',outline:'none',boxSizing:'border-box',lineHeight:1.5,height:'68px'}} />
-                   </div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',marginBottom:'18px',textAlign:'center'}}>Are you sure you want to cancel?</div>
-                   <div style={{display:'flex',gap:'10px'}}>
-                     <button onClick={function(){
-                       var sndC=new Audio('assets/friend.mp3'); sndC.volume=0.8; sndC.play().catch(function(){});
-                       var tgt = eventsCancelTarget;
-                       setAttendList(function(prev){ return prev.filter(function(a){ return a.id!==tgt.id; }); });
-                       var cancelTime = (function(){ if(!tgt.startTime) return '–'; var d=new Date(tgt.startTime); var h=d.getHours(); return (h<10?'0'+h:h)+':00'; })();
-                       setEventsNotifs(function(prev){ return [{id:Date.now(),type:'cancelled',username:tgt.username,event:tgt.event,map:tgt.map,time:cancelTime,timeAgo:'Just now',msg:eventsCancelMsg||''}].concat(prev); });
-                       setEventsCancelTarget(null);
-                       setEventsCancelSuccess({event:tgt.event,map:tgt.map,username:tgt.username});
-                       setTimeout(function(){ setEventsCancelSuccess(null); },3000);
-                     }} style={{flex:1,padding:'11px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.35)',borderRadius:'8px',color:'#EF4444',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>YES, CANCEL</button>
-                     <button onClick={function(){ setEventsCancelTarget(null); }}
-                       style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>NO, KEEP IT</button>
-                   </div>
-                 </div>
-               </div>
-             )}
+            {eventsReminder && (
+              <div style={{position:'fixed',inset:0,zIndex:9200,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.4)',borderRadius:'16px',padding:'28px 22px',width:'88%',maxWidth:'320px',textAlign:'center',animation:'modalPop 0.3s ease'}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'8px'}}>UPCOMING EVENT</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',color:'#C9D1DC',marginBottom:'6px',lineHeight:1.5}}>You said you will attend with</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',marginBottom:'4px'}}>{eventsReminder.username}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',marginBottom:'4px'}}>{eventsReminder.event}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',marginBottom:'4px'}}>{eventsReminder.map}</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.85rem',fontWeight:700,color:'#F59E0B',marginBottom:'20px'}}>{eventsReminder.time}</div>
+                  <button onClick={function(){setEventsReminder(null);}} style={{width:'100%',padding:'12px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'8px',color:'#F59E0B',fontFamily:"'Orbitron',sans-serif",fontSize:'0.68rem',fontWeight:700,letterSpacing:'1.5px',cursor:'pointer'}}>GOT IT, LET'S GO 🔥</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
-             {/* ── Cancel Success ── */}
-             {eventsCancelSuccess && (
-               <div className="trade-success-overlay" style={{zIndex:9300}}>
-                 <div className="trade-success-card" style={{borderColor:'rgba(239,68,68,0.38)',boxShadow:'0 0 60px rgba(239,68,68,0.1)',textAlign:'center'}}>
-                   <div style={{fontSize:'2rem',marginBottom:'8px'}}>✕</div>
-                   <div className="trade-success-title" style={{color:'#EF4444',marginBottom:'5px'}}>EVENT CANCELLED</div>
-                   <div className="trade-success-sub">You have cancelled</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{eventsCancelSuccess.event}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'20px'}}>{eventsCancelSuccess.map} · with {eventsCancelSuccess.username}</div>
-                   <button className="trade-success-more" style={{background:'rgba(239,68,68,0.08)',borderColor:'rgba(239,68,68,0.3)',color:'#EF4444'}} onClick={function(){ setEventsCancelSuccess(null); }}>BACK TO EVENTS</button>
-                 </div>
-               </div>
-             )}
-
-             {/* ── Reminder Popup ── */}
-             {eventsReminder && (
-               <div style={{position:'fixed',inset:0,zIndex:9200,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                 <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.4)',borderRadius:'16px',padding:'28px 22px',width:'88%',maxWidth:'320px',textAlign:'center',animation:'modalPop 0.3s ease'}}>
-                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'8px'}}>UPCOMING EVENT</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.82rem',color:'#C9D1DC',marginBottom:'6px',lineHeight:1.5}}>You said you will attend with</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#F59E0B',marginBottom:'4px'}}>{eventsReminder.username}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',marginBottom:'4px'}}>{eventsReminder.event}</div>
-                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.72rem',color:'#9CA3AF',marginBottom:'4px'}}>{eventsReminder.map}</div>
-                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.85rem',fontWeight:700,color:'#F59E0B',marginBottom:'20px'}}>{eventsReminder.time}</div>
-                   <button onClick={function(){ setEventsReminder(null); }}
-                     style={{width:'100%',padding:'12px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'8px',color:'#F59E0B',fontFamily:"'Orbitron',sans-serif",fontSize:'0.68rem',fontWeight:700,letterSpacing:'1.5px',cursor:'pointer'}}>
-                     GOT IT, LET'S GO 🔥
-                   </button>
-                 </div>
-               </div>
-             )}
-           </div>
-         );
-       })()}
+      </div>
 
             {activeTab === 'INVENTORY' && (
        <div className="footer">
