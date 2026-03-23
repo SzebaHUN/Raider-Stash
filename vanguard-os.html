@@ -854,15 +854,19 @@ const App = () => { const [activeTab, setActiveTab] = useState('RAIDER');
   useEffect(function(){
     if (activeTab !== 'EVENTS') return;
     // Full data refresh every 60s
-    var iv = setInterval(function(){ setEventsTick(function(t){ return t+1; }); }, 60000);
-    // Fake seconds counter — updates DOM directly every 1s (no React re-render)
+    var iv = setInterval(function(){ setEventsTick(function(t){ return t+1; }); }, 300000); // 5min re-render
+    // Seconds counter — reads absolute end timestamp, computes from Date.now()
+    // No cycling, no reset, always accurate — pure DOM, no React re-render
     var siv = setInterval(function(){
-      eventsSecondsRef.current = (eventsSecondsRef.current + 1) % 60;
-      var els = document.querySelectorAll('[data-ev-sec]');
+      var els = document.querySelectorAll('[data-ev-end]');
       for (var i=0; i<els.length; i++){
-        var base = parseInt(els[i].getAttribute('data-ev-sec'),10)||0;
-        var s = Math.max(0, base - eventsSecondsRef.current);
-        els[i].textContent = s+'s';
+        var end = parseInt(els[i].getAttribute('data-ev-end'),10)||0;
+        var remaining = Math.floor((end - Date.now()) / 1000);
+        if (remaining <= 0) {
+          els[i].textContent = '0s';
+        } else {
+          els[i].textContent = (remaining % 60) + 's';
+        }
       }
     }, 1000);
     if (!eventsReminderShown.current) {
@@ -3436,7 +3440,8 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
           if(ms<=0) return <span>NOW</span>;
           const r = cdFull(ms, true);
           const mins = r.h>0 ? r.h+'h '+r.rm+'m' : r.rm+'m';
-          return <span>{mins} <span data-ev-sec={r.rs}>{r.rs}s</span></span>;
+          const endTs = Date.now() + ms;
+          return <span>{mins} <span data-ev-end={endTs}>{r.rs}s</span></span>;
         };
 
         // Calendar helpers
@@ -3668,7 +3673,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                         </div>
                       </div>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>{cdJSX(ev.diff)}</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#60A5FA',fontWeight:700}}>STARTS IN {cdJSX(ev.diff)}</div>
                         <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                       </div>
                     </div>
@@ -3688,25 +3693,54 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                   </div>
                   <span style={{color:'#6B7280',fontSize:'0.7rem'}}>{eventsLaterOpen?'▲':'▼'}</span>
                 </div>
-                {eventsLaterOpen && (
-                  <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'12px'}}>
-                    {filtLater.map((ev,i) => (
-                      <div key={ev.name+ev.map+i} className="ev-list-card" style={{marginBottom:'6px'}}>
-                        <div className="ev-list-header">
-                          <div className="ev-icon-wrap-later" style={{flexShrink:0}}>{ev.icon&&<img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#9CA3AF',lineHeight:1.2}}>{ev.name}</div>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.65rem',color:'#6B7280',marginTop:'1px',fontWeight:600}}>{ev.map} · {fmtTime(ev.startTime)}</div>
+                {eventsLaterOpen && (function(){
+                  // Group by map
+                  const laterMaps = {};
+                  filtLater.forEach(ev => { if(!laterMaps[ev.map]) laterMaps[ev.map]=[]; laterMaps[ev.map].push(ev); });
+                  const laterMapKeys = Object.keys(laterMaps).sort();
+                  return (
+                    <div style={{background:'rgba(8,11,18,0.95)',border:'1px solid rgba(40,55,70,0.4)',borderRadius:'0 0 8px 8px',padding:'8px',marginBottom:'12px'}}>
+                      {laterMapKeys.map(function(map){
+                        const mapEvs = laterMaps[map];
+                        const mapOpen = calendarOpenMaps['later_'+map] === true;
+                        return (
+                          <div key={map} style={{marginBottom:'6px',background:'rgba(6,10,18,0.7)',border:'1px solid rgba(35,48,65,0.5)',borderRadius:'9px',overflow:'hidden'}}>
+                            <div onClick={function(){ setCalendarOpenMaps(function(prev){ const n={...prev}; n['later_'+map]=!mapOpen; return n; }); }}
+                              style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',cursor:'pointer',background:mapOpen?'rgba(245,158,11,0.04)':'transparent'}}>
+                              <div style={{width:'28px',height:'28px',borderRadius:'5px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(245,158,11,0.2)',background:'rgba(8,12,20,0.8)'}}>
+                                {mapEvs[0].icon && <img src={mapEvs[0].icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                              </div>
+                              <div style={{flex:1}}>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#F0F4F8'}}>{map}</div>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280',fontWeight:600}}>{mapEvs.length} event{mapEvs.length>1?'s':''}</div>
+                              </div>
+                              <span style={{color:'#4B5563',fontSize:'0.7rem'}}>{mapOpen?'▲':'▼'}</span>
+                            </div>
+                            {mapOpen && (
+                              <div style={{borderTop:'1px solid rgba(30,42,58,0.4)'}}>
+                                {mapEvs.map(function(ev,i){
+                                  return (
+                                    <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderBottom:i<mapEvs.length-1?'1px solid rgba(25,35,50,0.5)':'none',background:i%2===0?'rgba(8,12,22,0.4)':'transparent'}}>
+                                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',color:'#F59E0B',fontWeight:700,flexShrink:0,minWidth:'36px'}}>{fmtTime(ev.startTime)}</div>
+                                      <div style={{width:'28px',height:'28px',borderRadius:'5px',overflow:'hidden',flexShrink:0,border:'1px solid rgba(55,65,81,0.3)'}}>
+                                        {ev.icon && <img src={ev.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={function(e){e.target.style.display='none';}} />}
+                                      </div>
+                                      <div style={{flex:1,minWidth:0}}>
+                                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#E5E7EB'}}>{ev.name}</div>
+                                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.55rem',color:'#4B5563',fontWeight:600}}>{cdJSX(ev.diff)}</div>
+                                      </div>
+                                      <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px',flexShrink:0}}>
-                            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#4B5563',fontWeight:700}}>{cdJSX(ev.diff)}</div>
-                            <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
