@@ -3459,29 +3459,53 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
           const raw = eventsRawRef.current;
           if (!raw || raw.length === 0) return [];
 
-          // Build hourly schedule from raw data: {hour -> [{name, map, icon}]}
+          const pad = n => n<10?'0'+n:''+n;
+
+          // Check if the requested date is today
+          const now = new Date();
+          const isToday = (day === now.getDate() && mon === now.getMonth() && yr === now.getFullYear());
+
+          if (isToday) {
+            // For today: only show events that actually start today
+            const todayStart = new Date(yr, mon, day, 0, 0, 0).getTime();
+            const todayEnd   = new Date(yr, mon, day, 23, 59, 59).getTime();
+            const todayEvs = raw.filter(ev => ev.startTime >= todayStart && ev.startTime <= todayEnd);
+            const seen = {};
+            const result = [];
+            todayEvs.forEach(ev => {
+              const h = new Date(ev.startTime).getHours();
+              const key = h+'_'+ev.map+'_'+ev.name;
+              if (!seen[key]) {
+                seen[key] = true;
+                result.push({name:ev.name, map:ev.map, icon:ev.icon, time:pad(h)+':00', hour:h});
+              }
+            });
+            result.sort((a,b) => a.hour - b.hour);
+            return result;
+          }
+
+          // For future days: use ONLY today's unique hourly pattern as the cycle source,
+          // then project those slots to the requested date.
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime();
+          const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime();
+          const todayEvs = raw.filter(ev => ev.startTime >= todayStart && ev.startTime <= todayEnd);
+
           const hourlySlots = {};
-          raw.forEach(ev => {
+          todayEvs.forEach(ev => {
             const h = new Date(ev.startTime).getHours();
             if (!hourlySlots[h]) hourlySlots[h] = [];
-            // Avoid duplicates per hour+map combo
             const key = h+'_'+ev.map+'_'+ev.name;
             if (!hourlySlots[h].find(s => s.key===key)) {
               hourlySlots[h].push({key, name:ev.name, map:ev.map, icon:ev.icon, hour:h});
             }
           });
 
-          // Extrapolate to requested date — same hourly pattern repeats daily
           const result = [];
-          Object.values(hourlySlots).forEach(slots => {
-            slots.forEach(slot => {
-              const hr = slot.hour;
-              const pad = n => n<10?'0'+n:''+n;
-              result.push({name:slot.name, map:slot.map, icon:slot.icon, time:pad(hr)+':00', hour:hr});
+          Object.keys(hourlySlots).forEach(hStr => {
+            hourlySlots[hStr].forEach(slot => {
+              result.push({name:slot.name, map:slot.map, icon:slot.icon, time:pad(slot.hour)+':00', hour:slot.hour});
             });
           });
-
-          // Sort by hour
           result.sort((a,b) => a.hour - b.hour);
           return result;
         };
@@ -3646,7 +3670,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                         </div>
                       </div>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS {cdJSX(ev.endTime-Date.now())}</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.58rem',color:'#10B981',fontWeight:700}}>ENDS IN {cdJSX(ev.endTime-Date.now())}</div>
                         <button className="ev-invite-btn" onClick={function(e){ e.stopPropagation(); setEventsInviteTarget(ev); setEventsInviteSelected([]); setEventsInviteMsg(''); setEventsShowFriendPicker(false); }}>+ INVITE</button>
                       </div>
                     </div>
@@ -3841,20 +3865,35 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
             {/* ── Calendar Invite Modal ── */}
             {calendarInviteTarget && (
-              <div style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={function(){ if(!calendarShowFriendPicker) setCalendarInviteTarget(null); setCalendarShowFriendPicker(false); }}>
+              <div style={{position:'fixed',inset:0,zIndex:900,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={function(){ if(!calendarShowFriendPicker){setCalendarInviteTarget(null);setCalendarInviteSelected([]);} setCalendarShowFriendPicker(false); }}>
                 <div style={{background:'#080d14',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'14px',padding:'24px 20px',width:'88%',maxWidth:'320px',animation:'modalPop 0.25s ease'}} onClick={function(e){e.stopPropagation();}}>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.75rem',fontWeight:700,color:'#F59E0B',letterSpacing:'2px',marginBottom:'4px'}}>INVITE TO EVENT</div>
                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',color:'#C9D1DC',marginBottom:'16px'}}>{calendarInviteTarget.name} · {calendarInviteTarget.map} · <span style={{color:'#F59E0B'}}>{calendarInviteTarget.time || calendarInviteTarget.timeRange}</span></div>
                   <div style={{marginBottom:'14px',position:'relative'}}>
-                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px',marginBottom:'6px'}}>SELECT FRIEND</div>
-                    <button onClick={function(){ setCalendarShowFriendPicker(!calendarShowFriendPicker); }} style={{width:'100%',padding:'9px 12px',background:'rgba(15,20,28,0.8)',border:'1px solid rgba(55,65,81,0.45)',borderRadius:'8px',color:calendarInviteSelected?'#E5E7EB':'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:600,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',textAlign:'left'}}>
-                      <span>{calendarInviteSelected?calendarInviteSelected.username:'Choose a friend…'}</span>
-                      <span style={{color:'#4B5563'}}>{calendarShowFriendPicker?'▲':'▼'}</span>
-                    </button>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',fontWeight:700,color:'#9CA3AF',letterSpacing:'1.5px'}}>SELECT FRIENDS (MAX 2)</div>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.62rem',color:'#6B7280'}}>{calendarInviteSelected.length}/2</div>
+                    </div>
+                    {calendarInviteSelected.length > 0 && (
+                      <div style={{display:'flex',gap:'6px',marginBottom:'8px',flexWrap:'wrap'}}>
+                        {calendarInviteSelected.map(function(f){ return (
+                          <div key={f.id} style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:'20px',padding:'3px 8px 3px 6px'}}>
+                            <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',fontWeight:700,color:'#F59E0B'}}>{f.username}</span>
+                            <span onClick={function(){ setCalendarInviteSelected(function(prev){ return prev.filter(function(x){ return x.id!==f.id; }); }); }} style={{color:'#F59E0B',cursor:'pointer',fontSize:'0.7rem',lineHeight:1}}>×</span>
+                          </div>
+                        ); })}
+                      </div>
+                    )}
+                    {calendarInviteSelected.length < 2 && (
+                      <button onClick={function(){ setCalendarShowFriendPicker(!calendarShowFriendPicker); }} style={{width:'100%',padding:'9px 12px',background:'rgba(15,20,28,0.8)',border:'1px solid rgba(55,65,81,0.45)',borderRadius:'8px',color:'#4B5563',fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:600,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',textAlign:'left'}}>
+                        <span>Add a friend…</span>
+                        <span style={{color:'#4B5563'}}>{calendarShowFriendPicker?'▲':'▼'}</span>
+                      </button>
+                    )}
                     {calendarShowFriendPicker && (
                       <div className="ev-friend-picker" style={{top:'100%',marginTop:'4px'}}>
                         {TRADE_FRIENDS.map(f => (
-                          <div key={f.id} className="ev-friend-row" onClick={function(){ setCalendarInviteSelected(f); setCalendarShowFriendPicker(false); }}>
+                          <div key={f.id} className="ev-friend-row" onClick={function(){ if(calendarInviteSelected.length<2 && !calendarInviteSelected.find(function(x){return x.id===f.id;})){ setCalendarInviteSelected(function(prev){ return [...prev,f]; }); } setCalendarShowFriendPicker(false); }}>
                             <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Orbitron',sans-serif",fontSize:'0.8rem',fontWeight:700,color:'#F59E0B',flexShrink:0}}>{f.username[0]}</div>
                             <div style={{flex:1}}>
                               <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.78rem',fontWeight:700,color:'#E5E7EB'}}>{f.username}</div>
@@ -3872,17 +3911,21 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                   </div>
                   <div style={{display:'flex',gap:'10px'}}>
                     <button onClick={function(){
-                      if(!calendarInviteSelected) return;
+                      if(calendarInviteSelected.length===0) return;
                       var snd=new Audio('assets/friend.mp3');snd.volume=1.0;snd.play().catch(function(){});
-                      var tgt=calendarInviteTarget; var frnd=calendarInviteSelected;
+                      var tgt=calendarInviteTarget;
+                      var names=calendarInviteSelected.map(function(f){return f.username;}).join(' & ');
                       setCalendarInviteTarget(null);
-                      setCalendarInviteSuccess({username:frnd.username,event:tgt.name,map:tgt.map,time:tgt.time||tgt.timeRange,day:calendarSelectedDay,month:MONTHS[calendarMonth]});
-                      setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:frnd.username,event:tgt.name,map:tgt.map,time:tgt.time||'',timeAgo:'Just now',msg:''}].concat(prev); });
+                      setCalendarInviteSelected([]);
+                      setCalendarInviteMsg('');
+                      setCalendarShowFriendPicker(false);
+                      setCalendarInviteSuccess({names:names,event:tgt.name,map:tgt.map,time:tgt.time||tgt.timeRange,day:calendarSelectedDay,month:MONTHS[calendarMonth]});
+                      setEventsNotifs(function(prev){ return [{id:Date.now(),type:'sent',username:names,event:tgt.name,map:tgt.map,time:tgt.time||'',timeAgo:'Just now',msg:'',squad:[],squadMax:3}].concat(prev); });
                       setTimeout(function(){setCalendarInviteSuccess(null);},3500);
-                    }} style={{flex:1,padding:'11px',background:calendarInviteSelected?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(calendarInviteSelected?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color:calendarInviteSelected?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:calendarInviteSelected?'pointer':'default'}}>
-                      {calendarInviteSelected?'SEND INVITE · '+(calendarInviteTarget.time||''):'SEND INVITE'}
+                    }} style={{flex:1,padding:'11px',background:calendarInviteSelected.length>0?'rgba(245,158,11,0.12)':'rgba(30,30,30,0.5)',border:'1px solid '+(calendarInviteSelected.length>0?'rgba(245,158,11,0.4)':'rgba(55,65,81,0.3)'),borderRadius:'8px',color:calendarInviteSelected.length>0?'#F59E0B':'#4B5563',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:calendarInviteSelected.length>0?'pointer':'default'}}>
+                      {calendarInviteSelected.length>0?'SEND INVITE · '+(calendarInviteTarget.time||''):'SEND INVITE'}
                     </button>
-                    <button onClick={function(){ setCalendarInviteTarget(null); setCalendarShowFriendPicker(false); }} style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL</button>
+                    <button onClick={function(){ setCalendarInviteTarget(null); setCalendarInviteSelected([]); setCalendarShowFriendPicker(false); }} style={{flex:1,padding:'11px',background:'transparent',border:'1px solid rgba(55,65,81,0.3)',borderRadius:'8px',color:'#6B7280',fontFamily:"'Orbitron',sans-serif",fontSize:'0.62rem',fontWeight:700,letterSpacing:'1px',cursor:'pointer'}}>CANCEL</button>
                   </div>
                 </div>
               </div>
@@ -3894,7 +3937,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
                 <div className="trade-success-card" style={{borderColor:'rgba(245,158,11,0.38)',boxShadow:'0 0 60px rgba(245,158,11,0.12)',textAlign:'center'}}>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'1.4rem',color:'#F59E0B',marginBottom:'8px',fontWeight:700}}>◈</div>
                   <div className="trade-success-title" style={{color:'#F59E0B',marginBottom:'5px'}}>INVITE SENT</div>
-                  <div className="trade-success-sub">{calendarInviteSuccess.username} invited to</div>
+                  <div className="trade-success-sub">{calendarInviteSuccess.names} invited to</div>
                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.88rem',fontWeight:700,color:'#E5E7EB',margin:'8px 0 4px'}}>{calendarInviteSuccess.event}</div>
                   <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:'0.7rem',color:'#6B7280',marginBottom:'4px'}}>{calendarInviteSuccess.map}</div>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:'0.7rem',color:'#F59E0B',marginBottom:'20px'}}>{calendarInviteSuccess.month} {calendarInviteSuccess.day} · {calendarInviteSuccess.time}</div>
